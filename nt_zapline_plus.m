@@ -57,7 +57,7 @@ if size(x,1)<p.nfft; warning(['reducing nfft to ',num2str(size(x,1))]); p.nfft=s
 
 if ~nargout || plotflag
     % print result and display spectra
-    [y,yy,nremove,scores]=nt_zapline_bemobil(x,fline,nremove,p); %%% MK added outputs
+    [y,yy,nremove,scores]=nt_zapline_plus(x,fline,nremove,p); %%% MK added outputs
     disp('proportion of non-DC power removed:');
     disp(nt_wpwr(x-y)/nt_wpwr(nt_demean(x)));
     
@@ -123,7 +123,7 @@ if p.adaptiveNremove == 1
 % 	significant for noisier datasets which menas that clean datasets get more components removed which defeats the
 % 	purpose
     
-    [adaptiveNremove, ~] = bemobil_iterative_threshold_detection(scores,p.initialSigma,p.sigmaIncrease);
+    [adaptiveNremove, ~] = iterative_outlier_removal(scores,p.initialSigma,p.sigmaIncrease);
     fprintf('Adaptive score outlier detection found %d components to remove. This does not reduce the data rank!\n',adaptiveNremove);
     
     if adaptiveNremove<nremove
@@ -161,6 +161,6 @@ if 0
     artifact=max(artifact,0).^3; % introduce harmonics
     artifact=3*nt_demean(artifact*randn(1,nchans));
     disp(nt_wpwr(artifact)/nt_wpwr(signal+artifact));
-    nt_zapline_bemobil(signal+artifact,50/sr);
+    nt_zapline_plus(signal+artifact,50/sr);
 end
 
