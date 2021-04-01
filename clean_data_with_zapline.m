@@ -25,7 +25,6 @@
 %   figBase                 - integer. figure number to be created and plotted in. each iteration of linefreqs increases 
 %                               this number by 1. (default = 100)
 %   nfft                    - numerical. fft window size for computing the spectrum. (default = 512)
-%   adaptiveNremove         - bool. if automatic adaptation of removal should be used. (default = 1)
 %   nkeep                   - integer. PCA reduction of components before removal. (default = round(20+size(data,2)/4))
 %   initialSigma            - numerical. initial iterative outlier detection sigma threshold. (default = 3)
 %   sigmaIncrease           - numerical. iterative outlier detection sigma threshold increase per iteration (to ensure 
@@ -65,7 +64,7 @@ p = inputParser;
 p.CaseSensitive = false;
 
 addRequired(p, 'data', @(x) validateattributes(x,{'numeric'},{'matrix'},'clean_EEG_with_zapline','data'))
-addRequired(p, 'srate', @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','srate'))
+addRequired(p, 'srate', @(x) validateattributes(x,{'numeric'},{'positive','scalar','integer'},'clean_EEG_with_zapline','srate'))
 addRequired(p, 'linefreqs', @(x) validateattributes(x,{'numeric'},{'positive','vector'},'clean_EEG_with_zapline','linefreqs'))
 addOptional(p, 'adaptiveNremove', 1, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','adaptiveNremove'));
 addOptional(p, 'fixedNremove', 0, @(x) validateattributes(x,{'numeric'},{'integer'},'clean_EEG_with_zapline','fixedNremove'));
@@ -107,7 +106,6 @@ if chunkLength == 0
 end
 
 assert(isscalar(fixedNremove)||length(fixedNremove)==length(linefreqs),'''fixedNremove'' has to be either a scalar or the same length as linefreqs!')
-
 
 %%
 
