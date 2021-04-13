@@ -34,6 +34,7 @@
 %   cleanData               - clean EEG data matrix
 %   zaplineNremoveFinal     - matrix of number of removed components per linefreq and chunk
 %   scores                  - matrix of artifact component scores per linefreq and chunk
+%   zaplineConfig           - config struct with all used parameters
 %   plothandles             - vector of handles to the created figures
 % 
 % Example:
@@ -47,7 +48,7 @@
 %
 % Author: Marius Klug, 2021
 
-function [cleanData, resNremoveFinal, resScores, plothandles] = clean_data_with_zapline(data, srate, linefreqs, varargin)
+function [cleanData, resNremoveFinal, resScores, zaplineConfig, plothandles] = clean_data_with_zapline(data, srate, linefreqs, varargin)
 
 if nargin == 0
     help clean_data_with_zapline
@@ -107,27 +108,19 @@ end
 
 assert(isscalar(fixedNremove)||length(fixedNremove)==length(linefreqs),'''fixedNremove'' has to be either a scalar or the same length as linefreqs!')
 
-%%
 
 zaplineConfig.adaptiveNremove = adaptiveNremove;
 zaplineConfig.nkeep = nkeep;
+zaplineConfig.linefreqs = linefreqs;
+zaplineConfig.adaptiveNremove = adaptiveNremove;
+zaplineConfig.fixedNremove = fixedNremove;
+zaplineConfig.nfft = nfft;
 zaplineConfig.initialSigma = initialSigma;
 zaplineConfig.sigmaIncrease = sigmaIncrease;
+zaplineConfig.chunkLength = chunkLength;
+zaplineConfig.nkeep = nkeep;
 
-
-% store in EEG file
-% EEG.etc.zapline.linefreqs = linefreqs;
-% EEG.etc.zapline.adaptiveNremove = adaptiveNremove;
-% EEG.etc.zapline.fixedNremove = fixedNremove;
-% EEG.etc.zapline.nkeep = nkeep;
-% EEG.etc.zapline.initialSigma = initialSigma;
-% EEG.etc.zapline.sigmaIncrease = sigmaIncrease;
-% EEG.etc.zapline.chunkLength = chunkLength;
-% EEG.etc.zapline.nfft = nfft;
-
-clear plothandles
-
-% Clean each frequency one after another
+%% Clean each frequency one after another
 for iLinefreq = 1:length(linefreqs)
     
     linefreq = linefreqs(iLinefreq);
@@ -280,4 +273,8 @@ end
 
 if transposeData
     cleanData = cleanData';
+end
+
+if ~exist('plothandles','var')
+    plothandles = [];
 end
