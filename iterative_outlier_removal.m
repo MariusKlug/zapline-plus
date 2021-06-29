@@ -9,7 +9,6 @@
 % 
 % Optional Parameters:
 %   sd_level                    - initial sd level for removal (default = 3)
-%   sd_level_increase           - sd level increase per iteration (default = 0.1)
 % 
 % Outputs:
 %   n_remove                    - number of removed datapoints
@@ -19,14 +18,10 @@
 %   nt_zapline_plus, clean_data_with_zapline
 %
 % Author: Marius Klug, 2021
-function [n_remove, threshold] = iterative_outlier_removal(data_vector,sd_level,sd_level_increase)
+function [n_remove, threshold] = iterative_outlier_removal(data_vector,sd_level)
 
 if ~exist('sd_level','var')
 	sd_level = 3;
-end
-
-if ~exist('sd_level_increase','var')
-	sd_level_increase = 0.1;
 end
 
 threshold_old = max(data_vector);
@@ -40,8 +35,6 @@ while threshold < threshold_old
 	data_vector(flagged_points) = [];
 
 	n_remove = n_remove + sum(flagged_points);
-    
-    sd_level = sd_level + sd_level_increase;
     
     threshold_old = threshold;
 	threshold = mean(data_vector)+sd_level*std(data_vector);

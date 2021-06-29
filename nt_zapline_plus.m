@@ -17,8 +17,7 @@ function [y,yy,nremove,scores]=nt_zapline_plus(x,fline,nremove,p,plotflag)
 %    p.fig2: figure to use for results [default: 101]
 %    p.adaptiveNremove: use adaptive detection method of artifact scores for
 %		removal instead of predefined nremove
-%    p.initialSigma: initial sigma for automatic iterative outlier detection [default: 3]
-%    p.sigmaIncrease: increase of sigma threshold per outlier detection iteration [default: 0.1]
+%    p.noiseCompDetectSigma: sigma threshold for automatic iterative outlier detection [default: 3]
 %  plotflag: plot
 %
 %Examples:
@@ -46,8 +45,7 @@ if ~isfield(p,'niterations'); p.niterations=1; end
 if ~isfield(p,'fig1'); p.fig1=100; end
 if ~isfield(p, 'fig2'); p.fig2=101; end
 if ~isfield(p, 'adaptiveNremove'); p.adaptiveNremove=1; end
-if ~isfield(p, 'initialSigma'); p.initialSigma=3; end
-if ~isfield(p, 'sigmaIncrease'); p.sigmaIncrease=0.1; end
+if ~isfield(p, 'noiseCompDetectSigma'); p.noiseCompDetectSigma=3; end
 if nargin<5||isempty(plotflag); plotflag=0; end
 
 if isempty(x); error('!'); end
@@ -120,16 +118,21 @@ end
 if p.adaptiveNremove == 1
 % 	nremove = triangle_threshold(pwr1./pwr0,'R',1); 
 %   elbow detection does not work very well because the elbow is more
-% 	significant for noisier datasets which menas that clean datasets get more components removed which defeats the
+% 	significant for noisier datasets which means that clean datasets get more components removed which defeats the
 % 	purpose
     
-    [adaptiveNremove, ~] = iterative_outlier_removal(scores,p.initialSigma,p.sigmaIncrease);
-    fprintf('Adaptive score outlier detection found %d components to remove. This does not reduce the data rank!\n',adaptiveNremove);
+    [adaptiveNremove, ~] = iterative_outlier_removal(scores,p.noiseCompDetectSigma);
+%     fprintf('Adaptive score outlier detection found %d components to remove. This does not reduce the data rank!\n',adaptiveNremove);
     
     if adaptiveNremove<nremove
-        fprintf('Specified nremove is larger than adaptive nremove, using specified nremove (%d)! Set it to 0 to prevent this.\n',nremove);
+        fprintf('Fixed nremove (%d) is larger than adaptive nremove, using fixed nremove!\n',nremove);
     else
         nremove = adaptiveNremove;
+    end
+    
+    if nremove>round(size(x,2)/5)
+        fprintf('Nremove is larger than 1/5th of the components, using that (%d)!\n',round(size(x,2)/5));
+        nremove = round(size(x,2)/5);
     end
         
 end
