@@ -38,8 +38,9 @@
 %   plothandles             - vector of handles to the created figures
 %
 % Example:
-%   [cleanData, resNremoveFinal, resScores, plothandles] = clean_data_with_zapline(EEG.data,EEG.srate);
-%   [cleanData, resNremoveFinal, resScores, plothandles] = clean_data_with_zapline(EEG.data,EEG.srate,'adaptiveSigma',0,'chunkLength',200);
+%   EEG.data = clean_data_with_zapline(EEG.data,EEG.srate);
+%   [EEG.data, resNremoveFinal, resScores, plothandles] = clean_data_with_zapline(EEG.data,EEG.srate);
+%   [EEG.data, resNremoveFinal, resScores, plothandles] = clean_data_with_zapline(EEG.data,EEG.srate,'adaptiveSigma',0,'chunkLength',200);
 %
 % See also:
 %   nt_zapline_plus, iterative_outlier_removal
@@ -87,6 +88,7 @@ addOptional(p, 'detailedFreqBoundsLower', [-0.4 0.1], @(x) validateattributes(x,
 addOptional(p, 'nkeep', 0, @(x) validateattributes(x,{'numeric'},{'scalar','integer','positive'},'clean_EEG_with_zapline','nkeep'));
 addOptional(p, 'plotResults', 1, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','plotResults'));
 addOptional(p, 'figBase', 100, @(x) validateattributes(x,{'numeric'},{'scalar','integer','positive'},'clean_EEG_with_zapline','figBase'));
+addOptional(p, 'overwritePlot', 0, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','plotResults'));
 
 % parse the input
 parse(p,data,srate,varargin{:});
@@ -114,6 +116,11 @@ detailedFreqBoundsLower = p.Results.detailedFreqBoundsLower;
 nkeep = p.Results.nkeep;
 plotResults = p.Results.plotResults;
 figBase = p.Results.figBase;
+overwritePlot = p.Results.overwritePlot;
+
+if ~overwritePlot && ishandle(figBase+1)
+    figBase = figBase+100;
+end
 
 % finalize
 transposeData = size(data,2)>size(data,1);
