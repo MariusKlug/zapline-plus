@@ -118,7 +118,7 @@ plotResults = p.Results.plotResults;
 figBase = p.Results.figBase;
 overwritePlot = p.Results.overwritePlot;
 
-if ~overwritePlot && ishandle(figBase+1)
+while ~overwritePlot && ishandle(figBase+1)
     figBase = figBase+100;
 end
 
