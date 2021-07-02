@@ -16,7 +16,7 @@ function [y,yy,nremove,scores]=nt_zapline_plus(x,fline,nremove,p,plotflag)
 %    p.fig1: figure to use for DSS score [default: 100]
 %    p.fig2: figure to use for results [default: 101]
 %    p.adaptiveNremove: use adaptive detection method of artifact scores for
-%		removal instead of predefined nremove
+%		removal instead of predefined nremove. cannot remove more than 1/5th of the components!
 %    p.noiseCompDetectSigma: sigma threshold for automatic iterative outlier detection [default: 3]
 %  plotflag: plot
 %
@@ -29,6 +29,8 @@ function [y,yy,nremove,scores]=nt_zapline_plus(x,fline,nremove,p,plotflag)
 %    same, truncating PCs beyond the 30th to avoid overfitting
 %  [y,yy]=nt_zapline(x,60/1000)
 %    return cleaned data in y, noise in yy, don't plot
+% p=[];p.adaptiveNremove=1;nt_zapline(x,60/1000,1,p);
+%    removing at least 1, at most 1/5th of all components and uses an outlier detector to find the best nremove
 %
 % Original Author: Alain de Cheveigne, taken from http://audition.ens.fr/adc/NoiseTools/
 % Marius Klug: Added support for adaptive detection of nremove using outlier detection (2020)
@@ -114,7 +116,7 @@ if ~nargout;
     plot(pwr1./pwr0, '.-'); xlabel('component'); ylabel('score'); title('DSS to enhance line frequencies');
 end
 
-%% MK
+%% MK add
 if p.adaptiveNremove == 1
 % 	nremove = triangle_threshold(pwr1./pwr0,'R',1); 
 %   elbow detection does not work very well because the elbow is more

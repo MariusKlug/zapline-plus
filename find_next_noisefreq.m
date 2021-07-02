@@ -60,7 +60,7 @@ for i = i_start-round(winsize/2):i_end-round(winsize/2)+1
     center_thisdata = mean(thisdata([1:third third*2:end]));
     thresh = center_thisdata + threshdiff; % in log space this corresponds to a multiple of the center
     
-    % old detector tests
+    % old detector tests left in for the record
     %     mean_lower_quantile_thisdata = mean([quantile(thisdata(1:third),0.05) quantile(thisdata(third*2:end),0.05)]);
     %     thresh = min(center_thisdata + threshdiff * (center_thisdata -
     %     mean_lower_quantile_thisdata),center_thisdata+10); % 10 times more than center is minimum for noise detect in
