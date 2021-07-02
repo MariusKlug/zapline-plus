@@ -6,11 +6,11 @@ function [EEG, plothandles] = clean_data_with_zapline_eeglab_wrapper(EEG, zaplin
 %
 % Examples:
 % 
-%   EEG = clean_data_with_zapline(EEG); EEG.etc.zapline
+%   EEG = clean_data_with_zapline_eeglab_wrapper(EEG); EEG.etc.zapline
 % 
 %   zaplineConfig = [];
 %   zaplineConfig.adaptiveSigma = 0;
-%   [EEG, plothandles] = clean_data_with_zapline(EEG,zaplineConfig); EEG.etc.zapline
+%   [EEG, plothandles] = clean_data_with_zapline_eeglab_wrapper(EEG,zaplineConfig); EEG.etc.zapline
 % 
 % 
 % see also: clean_data_with_zapline
