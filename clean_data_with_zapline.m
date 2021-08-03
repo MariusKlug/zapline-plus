@@ -71,10 +71,13 @@
 %   cleanData               - clean EEG data matrix
 %   zaplineConfig           - config struct with all used parameters including the found noise frequencies. Can be 
 %                               re-entered to fully reproduce the previous cleaning
-%   resNremoveFinal         - matrix of number of removed components per noisefreq and chunk
-%   resScores               - matrix of artifact component scores per noisefreq and chunk
-%   resNoisePeaks           - matrix of individual noise peaks found per noisefreq and chunk
-%   resFoundNoise           - matrix of whether or not the noise peak exceeded a threshold, per noisefreq and chunk
+%   analyticsResults        - struct with all relevant analytics results: raw and cleaned log spectra of all channels,
+%                               sigma used for detection, proportion of removed power of complete spectrum, noise
+%                               frequency, and below noise frequency, proportion of spectral samples above/below the
+%                               threshold for each frequency, matrix of number of removed components per noisefreq and
+%                               chunk, matrix of artifact component scores per noisefreq and chunk, matrix of individual
+%                               noise peaks found per noisefreq and chunk, matrix of whether or not the noise peak
+%                               exceeded the threshold, per noisefreq and chunk,
 %   plothandles             - vector of handles to the created figures
 % 
 %
@@ -82,7 +85,7 @@
 % 
 %   EEG.data = clean_data_with_zapline(EEG.data,EEG.srate);
 %   [EEG.data, zaplineConfig] = clean_data_with_zapline(EEG.data,EEG.srate);
-%   [EEG.data, zaplineConfig, resNremoveFinal, resScores, resNoisePeaks, resFoundNoise, plothandles] = clean_data_with_zapline(EEG.data,EEG.srate,'adaptiveSigma',0,'chunkLength',200);
+%   [EEG.data, zaplineConfig, analyticsResults, plothandles] = clean_data_with_zapline(EEG.data,EEG.srate,'adaptiveSigma',0,'chunkLength',200);
 %
 % 
 % See also:
@@ -92,7 +95,7 @@
 % 
 % Author: Marius Klug, 2021
 
-function [cleanData, zaplineConfig, resNremoveFinal, resScores, resNoisePeaks, resFoundNoise, plothandles] = clean_data_with_zapline(data, srate, varargin)
+function [cleanData, zaplineConfig, analyticsResults, plothandles] = clean_data_with_zapline(data, srate, varargin)
 
 if nargin == 0
     help clean_data_with_zapline
@@ -209,14 +212,6 @@ if winSizeCompleteSpectrum == 0
     winSizeCompleteSpectrum = srate*chunkLength;
 end
 
-% default
-cleanData = data;
-resNremoveFinal = [];
-resScores = [];
-resNoisePeaks = [];
-resFoundNoise = [];
-
-
 % create config struct for zapline, also store any additional input for the record
 zaplineConfig.noisefreqs = p.Results.noisefreqs;
 zaplineConfig.coarseFreqDetectPowerDiff = p.Results.coarseFreqDetectPowerDiff;
@@ -240,15 +235,25 @@ zaplineConfig.detailedFreqBoundsUpper = p.Results.detailedFreqBoundsUpper;
 zaplineConfig.detailedFreqBoundsLower = p.Results.detailedFreqBoundsLower;
 zaplineConfig.nkeep = nkeep;
 
+% initialize results in case no noise frequenc is found
+[pxx_clean_log resSigmaFinal resProportionRemoved resProportionRemovedNoise resProportionRemovedBelowNoise resProportionBelowLower...
+resProportionAboveUpper resNremoveFinal resScores resNoisePeaks resFoundNoise] = deal([]);
+cleanData = data;
+
 %% Clean each frequency one after another
+
+disp('Computing initial spectrum...')
+% compute spectrum with frequency resolution of winSizeCompleteSpectrum
+[pxx_raw_log,f]=pwelch(data,hanning(winSizeCompleteSpectrum),[],[],srate);
+% log transform
+pxx_raw_log = 10*log10(pxx_raw_log);
+
+% store initial raw spectrum
+analyticsResults.rawSpectrumLog = pxx_raw_log;
+analyticsResults.frequencies = f;
 
 automaticFreqDetection = isempty(noisefreqs);
 if automaticFreqDetection
-    disp('Computing initial spectrum...')
-    % compute spectrum with frequency resolution of winSizeCompleteSpectrum
-    [pxx_raw_log,f]=pwelch(data,hanning(winSizeCompleteSpectrum),[],[],srate);
-    % log transform
-    pxx_raw_log = 10*log10(pxx_raw_log);
     disp(['Searching for first noise frequency between ' num2str(minfreq) ' and ' num2str(maxfreq) 'Hz...'])
     verbose = 0;
     [noisefreqs,~,~,thresh]=find_next_noisefreq(pxx_raw_log,f,minfreq,coarseFreqDetectPowerDiff,detectionWinsize,maxfreq,...
@@ -372,18 +377,18 @@ while i_noisefreq <= length(noisefreqs)
         [pxx_removed]=pwelch(data-cleanData,hanning(winSizeCompleteSpectrum),[],[],srate);
         pxx_removed_log = 10*log10(pxx_removed);
         
-        proportion_removed = (mean(pxx_raw(:)) - mean(pxx_clean(:)))/ mean(pxx_raw(:)); 
-        disp(['proportion of removed power: ' num2str(proportion_removed)]);
+        proportionRemoved = (mean(pxx_raw(:)) - mean(pxx_clean(:)))/ mean(pxx_raw(:)); 
+        disp(['proportion of removed power: ' num2str(proportionRemoved)]);
         
         this_freq_idx_belownoise = f<=noisefreq-1;
-        proportion_removed_belownoise = (mean(pxx_raw(this_freq_idx_belownoise,:),'all') - mean(pxx_clean(this_freq_idx_belownoise,:),'all')) /...
+        proportionRemovedBelowNoise = (mean(pxx_raw(this_freq_idx_belownoise,:),'all') - mean(pxx_clean(this_freq_idx_belownoise,:),'all')) /...
             mean(pxx_raw(this_freq_idx_belownoise,:),'all'); 
-        disp(['proportion of removed power below noise frequency: ' num2str(proportion_removed_belownoise)]);
+        disp(['proportion of removed power below noise frequency: ' num2str(proportionRemovedBelowNoise)]);
         
         this_freq_idx_noise = f>=noisefreq-0.1 & f<=noisefreq+0.1;
-        proportion_removed_noise = (mean(pxx_raw(this_freq_idx_noise,:),'all') - mean(pxx_clean(this_freq_idx_noise,:),'all')) /...
+        proportionRemovedNoise = (mean(pxx_raw(this_freq_idx_noise,:),'all') - mean(pxx_clean(this_freq_idx_noise,:),'all')) /...
             mean(pxx_raw(this_freq_idx_noise,:),'all'); 
-        disp(['proportion of removed power at noise frequency: ' num2str(proportion_removed_noise)]);
+        disp(['proportion of removed power at noise frequency: ' num2str(proportionRemovedNoise)]);
         
         
         
@@ -410,13 +415,13 @@ while i_noisefreq <= length(noisefreqs)
         proportionAboveUpper = sum(mean(pxx_clean_log(thisFreqidxUppercheck,:),2) > remainingNoiseThreshUpper) / sum(thisFreqidxUppercheck);
         cleaningTooWeak =  proportionAboveUpper > maxProportionAboveUpper;
         
-        proportionAboveLower = sum(mean(pxx_clean_log(thisFreqidxLowercheck,:),2) < remainingNoiseThreshLower) / sum(thisFreqidxLowercheck);
-        cleaningTooStong = proportionAboveLower > maxProportionAboveLower;
+        proportionBelowLower = sum(mean(pxx_clean_log(thisFreqidxLowercheck,:),2) < remainingNoiseThreshLower) / sum(thisFreqidxLowercheck);
+        cleaningTooStong = proportionBelowLower > maxProportionAboveLower;
         
         disp([num2str(round(proportionAboveUpper*100,2)) '% of frequency samples above thresh in the range of '...
             num2str(detailedFreqBoundsUpper(1)) ' to ' num2str(detailedFreqBoundsUpper(2)) 'Hz around noisefreq (threshold is '...
             num2str(maxProportionAboveUpper*100) '%).'])
-        disp([num2str(round(proportionAboveLower*100,2)) '% of frequency samples below thresh in the range of '...
+        disp([num2str(round(proportionBelowLower*100,2)) '% of frequency samples below thresh in the range of '...
             num2str(detailedFreqBoundsLower(1)) ' to ' num2str(detailedFreqBoundsLower(2)) 'Hz around noisefreq (threshold is '...
             num2str(maxProportionAboveLower*100) '%).'])
         
@@ -429,7 +434,7 @@ while i_noisefreq <= length(noisefreqs)
             
             this_freq_idx_plot = f>=noisefreq-1.1 & f<=noisefreq+1.1;
             plothandles(i_noisefreq) = figure(figThis);
-            clf; set(gcf,'color','w','Position',[31 256 1030 600])
+            clf; set(gcf,'color','w','Position',[0 0 1500 850])
             
             % plot original power
             subplot(3,30,[1:5]);
@@ -448,8 +453,8 @@ while i_noisefreq <= length(noisefreqs)
                 title({'predefined frequency:', [num2str(noisefreq) 'Hz']})
             end
             xlabel('frequency')
-            ylabel('mean(10*log10(psd))')
-            set(gca,'fontsize',8.5)
+            ylabel('Power [10*log10 \muV^2/Hz]')
+            set(gca,'fontsize',12)
             
             % plot nremoved
             pos = 8:17;
@@ -460,7 +465,7 @@ while i_noisefreq <= length(noisefreqs)
             ylim([0 max(NremoveFinal)+1])
             title({['# removed comps per ' num2str(chunkLength)...
                 's chunk, \mu = ' num2str(round(mean(NremoveFinal),2))]})
-            set(gca,'fontsize',8.5)
+            set(gca,'fontsize',12)
             hold on
             if searchIndividualNoise
                 foundNoisePlot = foundNoise;
@@ -489,9 +494,10 @@ while i_noisefreq <= length(noisefreqs)
             foundNoisePlot(~isnan(foundNoisePlot)) = noisePeaks(~isnan(foundNoisePlot));
             linehandle = plot(foundNoisePlot,'o','color',green);
                 l = legend(linehandle,{'no clear noise peak found'},'edgecolor',[0.8 0.8 0.8],'position',...
-                    [0.357310578153160 0.802821180259276 0.149469620926286 0.026666666070620]);
+                    [0.368923614106865 0.805246914159736 0.127083330337579 0.023148147568658]);
             end
             box off
+            set(gca,'fontsize',12)
             
             % plot scores
             subplot(3,30,[19:23]);
@@ -502,7 +508,7 @@ while i_noisefreq <= length(noisefreqs)
             xlim([0.7 round(size(scores,2)/3)])
             title({'mean artifact scores [a.u.]', ['\sigma for detection = ' num2str(thisZaplineConfig.noiseCompDetectSigma)]})
             xlabel('component')
-            set(gca,'fontsize',8.5)
+            set(gca,'fontsize',12)
             box off
             
             % plot new power
@@ -520,7 +526,7 @@ while i_noisefreq <= length(noisefreqs)
                 l2 = plot([f(find(thisFreqidxLowercheck,1,'first')) f(find(thisFreqidxLowercheck,1,'last'))],...
                     [remainingNoiseThreshLower remainingNoiseThreshLower],'color',red);
                 legend([l1 l2], {[num2str(round(proportionAboveUpper*100,2)) '% above']
-                    [num2str(round(proportionAboveLower*100,2)) '% below']},...
+                    [num2str(round(proportionBelowLower*100,2)) '% below']},...
                     'location','north','edgecolor',[0.8 0.8 0.8])
             end
             ylim([remainingNoiseThreshLower-0.25*(remainingNoiseThreshUpper-remainingNoiseThreshLower)
@@ -528,9 +534,9 @@ while i_noisefreq <= length(noisefreqs)
             
             
             xlabel('frequency')
-            ylabel('mean(10*log10(psd))')
+            ylabel('Power [10*log10 \muV^2/Hz]')
             title('cleaned spectrum')
-            set(gca,'fontsize',8.5)
+            set(gca,'fontsize',12)
             box off
             
             
@@ -538,46 +544,42 @@ while i_noisefreq <= length(noisefreqs)
             
             pos = [11:14 21:24];
             ax1 = subplot(60,10,[pos+60*4 pos+60*5 pos+60*6 pos+60*7 pos+60*8 pos+60*9]);
-            cla
-            plot(f,mean(pxx_raw_log,2));
+            hold on
+            cla 
+%             singlehandles = plot(f,pxx_raw_log,'color',[0.8 0.8 0.8]);
+            meanhandles = plot(f,mean(pxx_raw_log,2),'color',grey,'linewidth',1.5);
             set(gca,'ygrid','on','xgrid','on');
             set(gca,'yminorgrid','on')
-            set(gca,'fontsize',8.5)
+            set(gca,'fontsize',12)
             xlabel('frequency');
-            ylabel('mean(10*log10(psd))');
+            ylabel('Power [10*log10 \muV^2/Hz]');
             ylimits1=get(gca,'ylim');
-            hh=get(gca,'children');
-            set(hh(1),'color',grey)
             title(['noise frequency: ' num2str(noisefreq) 'Hz'])
             box off
-            hold on
             
             
-            % plot removed noise spectrum
+            % plot removed and clean spectrum
             
             pos = [15:18 25:28];
-            subplot(60,10,[pos+60*4 pos+60*5 pos+60*6 pos+60*7 pos+60*8 pos+60*9]);
-            
-            plot(f/(f_noise*srate),mean(pxx_removed_log,2),'color',red);
-            
-            % plot clean spectrum
+            ax2 = subplot(60,10,[pos+60*4 pos+60*5 pos+60*6 pos+60*7 pos+60*8 pos+60*9]);
             hold on
             
-            ax2 = subplot(60,10,[pos+60*4 pos+60*5 pos+60*6 pos+60*7 pos+60*8 pos+60*9]);
-            
-            plot(f/(f_noise*srate),mean(pxx_clean_log,2),'color',green);
+%             plot(f/(f_noise*srate),pxx_removed_log,'color',[0.95 0.85 0.75]);
+%             plot(f/(f_noise*srate),pxx_clean_log,'color',[0.7 0.8 0.82]);
+            removedhandle = plot(f/(f_noise*srate),mean(pxx_removed_log,2),'color',red,'linewidth',1.5);
+            cleanhandle = plot(f/(f_noise*srate),mean(pxx_clean_log,2),'color',green,'linewidth',1.5);
             
             
             % adjust plot
             set(gca,'ygrid','on','xgrid','on');
             set(gca,'yminorgrid','on')
-            set(gca,'fontsize',8.5)
+            set(gca,'fontsize',12)
             set(gca,'yticklabel',[]); ylabel([]);
             xlabel('frequency (relative to noise)');
             ylimits2=get(gca,'ylim');
             ylimits(1)=min(ylimits1(1),ylimits2(1)); ylimits(2)=max(ylimits1(2),ylimits2(2));
-            title({['removed power of full spectrum: ' num2str(proportion_removed*100) '%']
-            ['removed power at noise frequency: ' num2str(proportion_removed_noise*100) '%']})
+            title({['removed power of full spectrum: ' num2str(proportionRemoved*100) '%']
+            ['removed power at noise frequency: ' num2str(proportionRemovedNoise*100) '%']})
             
             ylim(ax1,ylimits);
             ylim(ax2,ylimits);
@@ -588,30 +590,31 @@ while i_noisefreq <= length(noisefreqs)
             
             % plot shaded min max freq areas
             
-            fill(ax1,[0 minfreq minfreq 0],[ylimits(1) ylimits(1) ylimits(2) ylimits(2)],[0 0 0],'facealpha',0.1,'edgealpha',0)
+            freqhandles = fill(ax1,[0 minfreq minfreq 0],[ylimits(1) ylimits(1) ylimits(2) ylimits(2)],[0 0 0],'facealpha',0.1,'edgealpha',0);
             fill(ax1,[maxfreq max(f) max(f) maxfreq],[ylimits(1) ylimits(1) ylimits(2) ylimits(2)],[0 0 0],'facealpha',0.1,'edgealpha',0)
-            legend(ax1,{'raw data','below min / above max freq'},'edgecolor',[0.8 0.8 0.8]);
+%             legend(ax1,[meanhandles singlehandles(1) freqhandles],{'raw data (mean)','raw data (single channels)','below min / above max freq'},'edgecolor',[0.8 0.8 0.8]);
+            legend(ax1,[meanhandles freqhandles],{'raw data','below min / above max freq'},'edgecolor',[0.8 0.8 0.8]);
             
             fill(ax2,[0 minfreq minfreq 0]/noisefreq,[ylimits(1) ylimits(1) ylimits(2) ylimits(2)],[0 0 0],'facealpha',0.1,'edgealpha',0)
             fill(ax2,[maxfreq max(f) max(f) maxfreq]/noisefreq,[ylimits(1) ylimits(1) ylimits(2) ylimits(2)],[0 0 0],'facealpha',0.1,'edgealpha',0)
-            legend(ax2,{'removed data','clean data'},'edgecolor',[0.8 0.8 0.8]);
+            legend(ax2,[cleanhandle,removedhandle],{'clean data','removed data'},'edgecolor',[0.8 0.8 0.8]);
             
             
             % plot below noise
             pos = [19:20 29:30];
             subplot(60,10,[pos+60*4 pos+60*5 pos+60*6 pos+60*7 pos+60*8 pos+60*9]);
             
-            plot(f(this_freq_idx_belownoise),mean(pxx_raw_log(this_freq_idx_belownoise,:),2),'color',grey);
+            plot(f(this_freq_idx_belownoise),mean(pxx_raw_log(this_freq_idx_belownoise,:),2),'color',grey,'linewidth',1.5);
             hold on
-            plot(f(this_freq_idx_belownoise),mean(pxx_clean_log(this_freq_idx_belownoise,:),2),'color',green);
+            plot(f(this_freq_idx_belownoise),mean(pxx_clean_log(this_freq_idx_belownoise,:),2),'color',green,'linewidth',1.5);
             legend({'raw data','clean data'},'edgecolor',[0.8 0.8 0.8]);
             set(gca,'ygrid','on','xgrid','on');
             set(gca,'yminorgrid','on')
-            set(gca,'fontsize',8.5)
+            set(gca,'fontsize',12)
             xlabel('frequency');
             box off
-            xlim([min((this_freq_idx_belownoise))-max((this_freq_idx_belownoise))*0.13 max(f(this_freq_idx_belownoise))]);
-            title({'removed below noise:',[ num2str(proportion_removed_belownoise*100) '%']})
+            xlim([1 max(f(this_freq_idx_belownoise))]);
+            title({'removed below noise:',[ num2str(proportionRemovedBelowNoise*100) '%']})
             
             drawnow
             
@@ -652,6 +655,12 @@ while i_noisefreq <= length(noisefreqs)
     resNremoveFinal(i_noisefreq,1:size(NremoveFinal,1),1:size(NremoveFinal,2)) = NremoveFinal;
     resNoisePeaks(i_noisefreq,1:size(noisePeaks,1),1:size(noisePeaks,2)) = noisePeaks;
     resFoundNoise(i_noisefreq,1:size(foundNoise,1),1:size(foundNoise,2)) = foundNoise;
+    resSigmaFinal(i_noisefreq) = thisZaplineConfig.noiseCompDetectSigma;
+    resProportionRemoved(i_noisefreq) = proportionRemoved;
+    resProportionRemovedNoise(i_noisefreq) = proportionRemovedNoise;
+    resProportionRemovedBelowNoise(i_noisefreq) = proportionRemovedBelowNoise;
+    resProportionBelowLower(i_noisefreq) = proportionBelowLower;
+    resProportionAboveUpper(i_noisefreq) = proportionAboveUpper;
     
     if automaticFreqDetection
         disp(['Searching for first noise frequency between ' num2str(noisefreqs(i_noisefreq)+detailedFreqBoundsUpper(2)) ' and ' num2str(maxfreq) 'Hz...'])
@@ -671,21 +680,19 @@ if transposeData
     cleanData = cleanData';
 end
 
-if ~exist('plothandles','var')
+if plotResults && ~exist('plothandles','var')
     
     figThis = figBase+1;
     plothandles(i_noisefreq) = figure(figThis);
     clf; set(gcf,'color','w','Position',[31 256 1030 600])
     
     grey = [0.2 0.2 0.2];
-    plot(f,mean(pxx_raw_log,2));
+    plot(f,mean(pxx_raw_log,2),'color',grey);
     legend({'raw'},'edgecolor',[0.8 0.8 0.8]);
     set(gca,'ygrid','on','xgrid','on');
     set(gca,'yminorgrid','on')
     xlabel('frequency');
-    ylabel('mean(10*log10(psd))');
-    hh=get(gca,'children');
-    set(hh(1),'color',grey)
+    ylabel('Power [10*log10 \muV^2/Hz]');
     title('no noise found')
     box off
     xlim([min(f)-max(f)*0.0015 max(f)]);
@@ -693,5 +700,17 @@ if ~exist('plothandles','var')
 end
 
 zaplineConfig.noisefreqs = noisefreqs;
+
+analyticsResults.cleanSpectrumLog = pxx_clean_log;
+analyticsResults.sigmaFinal = resSigmaFinal;
+analyticsResults.proportionRemoved = resProportionRemoved;
+analyticsResults.proportionRemovedNoise = resProportionRemovedNoise;
+analyticsResults.proportionRemovedBelowNoise = resProportionRemovedBelowNoise;
+analyticsResults.proportionBelowLower = resProportionBelowLower;
+analyticsResults.proportionAboveUpper = resProportionAboveUpper;
+analyticsResults.NremoveFinal = resNremoveFinal;
+analyticsResults.scores = resScores;
+analyticsResults.noisePeaks = resNoisePeaks;
+analyticsResults.foundNoise = resFoundNoise;
 
 disp('Cleaning with ZapLine done!')

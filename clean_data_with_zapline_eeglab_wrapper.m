@@ -19,12 +19,10 @@ function [EEG, plothandles] = clean_data_with_zapline_eeglab_wrapper(EEG, zaplin
 
 if ~exist('zaplineConfig','var')
     % run zapline subfunction with default parameters
-    [EEG.data, EEG.etc.zapline.config, EEG.etc.zapline.NremoveFinal, EEG.etc.zapline.Scores, EEG.etc.zapline.resNoisePeaks,...
-        EEG.etc.zapline.resFoundNoise,plothandles] = clean_data_with_zapline(EEG.data, EEG.srate);
+    [EEG.data, EEG.etc.zapline.config, EEG.etc.zapline.analyticsResults, plothandles] = clean_data_with_zapline(EEG.data, EEG.srate);
 else
     % run zapline subfunction with config parameters
-    [EEG.data, EEG.etc.zapline.config, EEG.etc.zapline.NremoveFinal, EEG.etc.zapline.Scores, EEG.etc.zapline.resNoisePeaks,...
-        EEG.etc.zapline.resFoundNoise,plothandles] = clean_data_with_zapline(EEG.data, EEG.srate, zaplineConfig);
+    [EEG.data, EEG.etc.zapline.config, EEG.etc.zapline.analyticsResults, plothandles] = clean_data_with_zapline(EEG.data, EEG.srate, zaplineConfig);
 end
 
 
