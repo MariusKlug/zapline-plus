@@ -73,11 +73,12 @@
 %                               re-entered to fully reproduce the previous cleaning
 %   analyticsResults        - struct with all relevant analytics results: raw and cleaned log spectra of all channels,
 %                               sigma used for detection, proportion of removed power of complete spectrum, noise
-%                               frequency, and below noise frequency, proportion of spectral samples above/below the
-%                               threshold for each frequency, matrix of number of removed components per noisefreq and
-%                               chunk, matrix of artifact component scores per noisefreq and chunk, matrix of individual
-%                               noise peaks found per noisefreq and chunk, matrix of whether or not the noise peak
-%                               exceeded the threshold, per noisefreq and chunk,
+%                               frequency, and below noise frequency, ratio of noise power to surroundings before and
+%                               after cleaning, proportion of spectral samples above/below the threshold for each
+%                               frequency, matrix of number of removed components per noisefreq and chunk, matrix of
+%                               artifact component scores per noisefreq and chunk, matrix of individual noise peaks
+%                               found per noisefreq and chunk, matrix of whether or not the noise peak exceeded the
+%                               threshold, per noisefreq and chunk,
 %   plothandles             - vector of handles to the created figures
 % 
 %
@@ -237,7 +238,7 @@ zaplineConfig.nkeep = nkeep;
 
 % initialize results in case no noise frequenc is found
 [pxx_clean_log resSigmaFinal resProportionRemoved resProportionRemovedNoise resProportionRemovedBelowNoise resProportionBelowLower...
-resProportionAboveUpper resNremoveFinal resScores resNoisePeaks resFoundNoise] = deal([]);
+resProportionAboveUpper resRatioNoiseRaw resRatioNoiseClean resNremoveFinal resScores resNoisePeaks resFoundNoise] = deal([]);
 cleanData = data;
 
 %% Clean each frequency one after another
@@ -377,18 +378,38 @@ while i_noisefreq <= length(noisefreqs)
         [pxx_removed]=pwelch(data-cleanData,hanning(winSizeCompleteSpectrum),[],[],srate);
         pxx_removed_log = 10*log10(pxx_removed);
         
+        % compute analytics
+        
+        % in original space
         proportionRemoved = (mean(pxx_raw(:)) - mean(pxx_clean(:)))/ mean(pxx_raw(:)); 
+        % in log space -> makes more sense to be consistent with visuals, and we argue that the geometric mean is a
+        % better measure anyways
+        proportionRemoved = 1-10^((mean(pxx_clean_log(:)) - mean(pxx_raw_log(:)))/10); 
         disp(['proportion of removed power: ' num2str(proportionRemoved)]);
         
-        this_freq_idx_belownoise = f<=noisefreq-1;
+        this_freq_idx_belownoise = f>=max(noisefreq-11,0) & f<=noisefreq-1;
         proportionRemovedBelowNoise = (mean(pxx_raw(this_freq_idx_belownoise,:),'all') - mean(pxx_clean(this_freq_idx_belownoise,:),'all')) /...
+            mean(pxx_raw(this_freq_idx_belownoise,:),'all'); 
+        proportionRemovedBelowNoise = 1-10^((mean(pxx_clean_log(this_freq_idx_belownoise,:),'all') - mean(pxx_raw_log(this_freq_idx_belownoise,:),'all'))/10);
+        
+        (mean(pxx_raw_log(this_freq_idx_belownoise,:),'all') - mean(pxx_clean(this_freq_idx_belownoise,:),'all')) /...
             mean(pxx_raw(this_freq_idx_belownoise,:),'all'); 
         disp(['proportion of removed power below noise frequency: ' num2str(proportionRemovedBelowNoise)]);
         
-        this_freq_idx_noise = f>=noisefreq-0.1 & f<=noisefreq+0.1;
+        this_freq_idx_noise = f>noisefreq+detailedFreqBoundsUpper(1) & f<noisefreq+detailedFreqBoundsUpper(2);
         proportionRemovedNoise = (mean(pxx_raw(this_freq_idx_noise,:),'all') - mean(pxx_clean(this_freq_idx_noise,:),'all')) /...
             mean(pxx_raw(this_freq_idx_noise,:),'all'); 
+        proportionRemovedNoise = 1-10^((mean(pxx_clean_log(this_freq_idx_noise,:),'all') - mean(pxx_raw_log(this_freq_idx_noise,:),'all'))/10); 
         disp(['proportion of removed power at noise frequency: ' num2str(proportionRemovedNoise)]);
+        
+        this_freq_idx_noise_surrounding = (f>noisefreq-(detectionWinsize/2) & f<noisefreq-(detectionWinsize/6)) |...
+            (f>noisefreq+(detectionWinsize/6) & f<noisefreq+(detectionWinsize/2));
+        
+        ratioNoiseRaw = 10^((mean(mean(pxx_raw_log(this_freq_idx_noise,:),2)) - mean(pxx_raw_log(this_freq_idx_noise_surrounding,:),'all'))/10);
+        ratioNoiseClean = 10^((mean(mean(pxx_clean_log(this_freq_idx_noise,:),2)) - mean(pxx_clean_log(this_freq_idx_noise_surrounding,:),'all'))/10);
+        
+        disp(['ratio of noise power to surroundings power before cleaning: ' num2str(ratioNoiseRaw)]);
+        disp(['ratio of noise power to surroundings power after cleaning: ' num2str(ratioNoiseClean)]);
         
         
         
@@ -554,7 +575,7 @@ while i_noisefreq <= length(noisefreqs)
             xlabel('frequency');
             ylabel('Power [10*log10 \muV^2/Hz]');
             ylimits1=get(gca,'ylim');
-            title(['noise frequency: ' num2str(noisefreq) 'Hz'])
+            title({['noise frequency: ' num2str(noisefreq) 'Hz'],['ratio of noise to surroundings: ' num2str(ratioNoiseRaw)]})
             box off
             
             
@@ -578,8 +599,8 @@ while i_noisefreq <= length(noisefreqs)
             xlabel('frequency (relative to noise)');
             ylimits2=get(gca,'ylim');
             ylimits(1)=min(ylimits1(1),ylimits2(1)); ylimits(2)=max(ylimits1(2),ylimits2(2));
-            title({['removed power of full spectrum: ' num2str(proportionRemoved*100) '%']
-            ['removed power at noise frequency: ' num2str(proportionRemovedNoise*100) '%']})
+            title({['removed power at noise frequency: ' num2str(proportionRemovedNoise*100) '%']
+            ['ratio of noise to surroundings: ' num2str(ratioNoiseClean)]})
             
             ylim(ax1,ylimits);
             ylim(ax2,ylimits);
@@ -601,8 +622,11 @@ while i_noisefreq <= length(noisefreqs)
             
             
             % plot below noise
-            pos = [19:20 29:30];
-            subplot(60,10,[pos+60*4 pos+60*5 pos+60*6 pos+60*7 pos+60*8 pos+60*9]);
+            pos = [];
+            for i = 26:57
+                pos = [pos i*40-5:i*40];
+            end
+            subplot(60,40,pos);
             
             plot(f(this_freq_idx_belownoise),mean(pxx_raw_log(this_freq_idx_belownoise,:),2),'color',grey,'linewidth',1.5);
             hold on
@@ -613,8 +637,9 @@ while i_noisefreq <= length(noisefreqs)
             set(gca,'fontsize',12)
             xlabel('frequency');
             box off
-            xlim([1 max(f(this_freq_idx_belownoise))]);
-            title({'removed below noise:',[ num2str(proportionRemovedBelowNoise*100) '%']})
+            xlim([min(f(this_freq_idx_belownoise)) max(f(this_freq_idx_belownoise))]);
+            title({['removed of full spectrum: ' num2str(proportionRemoved*100) '%']
+                ['removed below noise: ' num2str(proportionRemovedBelowNoise*100) '%']})
             
             drawnow
             
@@ -659,6 +684,8 @@ while i_noisefreq <= length(noisefreqs)
     resProportionRemoved(i_noisefreq) = proportionRemoved;
     resProportionRemovedNoise(i_noisefreq) = proportionRemovedNoise;
     resProportionRemovedBelowNoise(i_noisefreq) = proportionRemovedBelowNoise;
+    resRatioNoiseRaw(i_noisefreq) = ratioNoiseRaw;
+    resRatioNoiseClean(i_noisefreq) = ratioNoiseClean;
     resProportionBelowLower(i_noisefreq) = proportionBelowLower;
     resProportionAboveUpper(i_noisefreq) = proportionAboveUpper;
     
@@ -708,6 +735,8 @@ analyticsResults.proportionRemovedNoise = resProportionRemovedNoise;
 analyticsResults.proportionRemovedBelowNoise = resProportionRemovedBelowNoise;
 analyticsResults.proportionBelowLower = resProportionBelowLower;
 analyticsResults.proportionAboveUpper = resProportionAboveUpper;
+analyticsResults.ratioNoiseRaw = resRatioNoiseRaw;
+analyticsResults.ratioNoiseClean = resRatioNoiseClean;
 analyticsResults.NremoveFinal = resNremoveFinal;
 analyticsResults.scores = resScores;
 analyticsResults.noisePeaks = resNoisePeaks;
