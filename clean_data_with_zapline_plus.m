@@ -129,7 +129,7 @@ p.CaseSensitive = false;
 
 addRequired(p, 'data', @(x) validateattributes(x,{'numeric'},{'2d'},'clean_EEG_with_zapline','data'))
 addRequired(p, 'srate', @(x) validateattributes(x,{'numeric'},{'positive','scalar','integer'},'clean_EEG_with_zapline','srate'))
-addOptional(p, 'noisefreqs', [], @(x) validateattributes(x,{'numeric'},{'positive','vector'},'clean_EEG_with_zapline','noisefreqs'))
+addOptional(p, 'noisefreqs', [], @(x) validateattributes(x,{'numeric'},{},'clean_EEG_with_zapline','noisefreqs'))
 addOptional(p, 'fixedNremove', 1, @(x) validateattributes(x,{'numeric'},{'integer','scalar'},'clean_EEG_with_zapline','fixedNremove'));
 addOptional(p, 'minfreq', 17, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','minfreq'))
 addOptional(p, 'maxfreq', 99, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','maxfreq'))
