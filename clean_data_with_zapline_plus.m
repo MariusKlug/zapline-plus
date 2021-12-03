@@ -10,22 +10,22 @@
 % Requires noisetools to be installed: http://audition.ens.fr/adc/NoiseTools/
 %
 % Usage:
-% 
+%
 %   >>  [cleanData, zaplineConfig, resNremoveFinal, resScores, resNoisePeaks, resFoundNoise, plothandles] = clean_data_with_zapline_plus(data, srate, varargin);
 %
-% 
+%
 % Required Inputs:
-% 
+%
 %   data                    - MEEG data matrix
 %   srate                   - sampling rate in Hz
 %
-% 
+%
 % Optional Parameters (these can be entered as <'key',value> pairs OR as a single struct containing relevant parameters!):
-% 
+%
 %   noisefreqs                      - vector with one or more noise frequencies to be removed. if empty or missing, noise freqs
 %                                       will be detected automatically
 %   adaptiveNremove                 - bool. if automatic adaptation of number of removed components should be used. (default = 1)
-%   fixedNremove                    - fixed number of removed components. if adaptive removal is used, this will be the 
+%   fixedNremove                    - fixed number of removed components. if adaptive removal is used, this will be the
 %                                       minimum. Will be automatically adapted if "adaptiveSigma" is set to 1. (default = 1)
 %   minfreq                         - minimum frequency to be considered as noise when searching for noise freqs automatically.
 %                                       (default = 17)
@@ -38,38 +38,42 @@
 %                                       a noise freq peak. (default = 1.76, meaning a 1.5 x increase of the power over the mean)
 %   searchIndividualNoise           - bool whether or not individual noise peaks should be used instead of the specified
 %                                       or found noise on the complete data (default = 1)
-%   freqDetectMultFine              - multiplier for the 5% quantile deviation detector of the fine noise frequency 
+%   freqDetectMultFine              - multiplier for the 5% quantile deviation detector of the fine noise frequency
 %                                       detection for adaption of sigma thresholds for too strong/weak cleaning (default = 2)
-%   detailedFreqBoundsUpper         - frequency boundaries for the fine threshold of too weak cleaning. 
+%   detailedFreqBoundsUpper         - frequency boundaries for the fine threshold of too weak cleaning.
 %                                       (default = [-0.05 0.05])
-%   detailedFreqBoundsLower         - frequency boundaries for the fine threshold of too strong cleaning. 
+%   detailedFreqBoundsLower         - frequency boundaries for the fine threshold of too strong cleaning.
 %                                       (default = [-0.4 0.1])
 %   maxProportionAboveUpper         - proportion of frequency samples that may be above the upper threshold before
 %                                       cleaning is adapted. (default = 0.005)
 %   maxProportionBelowLower         - proportion of frequency samples that may be above the lower threshold before
 %                                       cleaning is adapted. (default = 0.005)
-%   noiseCompDetectSigma            - initial sigma threshold for iterative outlier detection of noise components to be 
+%   noiseCompDetectSigma            - initial sigma threshold for iterative outlier detection of noise components to be
 %                                       removed. Will be automatically adapted if "adaptiveSigma" is set to 1 (default = 3)
-%   adaptiveSigma                   - bool. if automatic adaptation of noiseCompDetectSigma should be used. Also adapts 
+%   adaptiveSigma                   - bool. if automatic adaptation of noiseCompDetectSigma should be used. Also adapts
 %                                       fixedNremove when cleaning becomes stricter. (default = 1)
 %   minsigma                        - minimum when adapting noiseCompDetectSigma. (default = 2.5)
 %   maxsigma                        - maximum when adapting noiseCompDetectSigma. (default = 4)
-%   chunkLength                     - length of chunks to be cleaned in seconds. if set to 0, no chunks will be used.
-%                                       (default = 150)
+%   chunkLength                     - length of chunks to be cleaned in seconds. if set to 0, automatic chunks will be used.
+%                                       (default = 0)
+%   segmentLength                   - length of the segments for automatic chunk detection in seconds (default = 1)
+%   minChunkLength                  - minimum chunk length of automatic chunk detection in seconds (default = 15)
+%   prominenceQuantile              - quantile of the prominence (difference bewtween peak and through) for peak 
+%                                       detection of channel covariance for new chunks (default = 0.95)
 %   winSizeCompleteSpectrum         - window size in samples of the pwelch function to compute the spectrum of the complete dataset
 %                                       for detecting the noise freqs (default = srate*chunkLength)
 %   nkeep                           - PCA reduction of components before removal. (default = number of channels)
 %   plotResults                     - bool if plot should be created. (default = 1)
 %   figBase                         - integer. figure number to be created and plotted in. each iteration of noisefreqs increases
 %                                       this number by 1. (default = 100)
-%   overwritePlot                   - bool if plot should be overwritten. if not, figbase will be increased by 100 until 
+%   overwritePlot                   - bool if plot should be overwritten. if not, figbase will be increased by 100 until
 %                                       no figure exists (default = 0)
-% 
-% 
+%
+%
 % Outputs:
-% 
+%
 %   cleanData               - clean EEG data matrix
-%   zaplineConfig           - config struct with all used parameters including the found noise frequencies. Can be 
+%   zaplineConfig           - config struct with all used parameters including the found noise frequencies. Can be
 %                               re-entered to fully reproduce the previous cleaning
 %   analyticsResults        - struct with all relevant analytics results: raw and cleaned log spectra of all channels,
 %                               sigma used for detection, proportion of removed power of complete spectrum, noise
@@ -80,20 +84,20 @@
 %                               found per noisefreq and chunk, matrix of whether or not the noise peak exceeded the
 %                               threshold, per noisefreq and chunk
 %   plothandles             - vector of handles to the created figures
-% 
+%
 %
 % Examples:
-% 
+%
 %   EEG.data = clean_data_with_zapline_plus(EEG.data,EEG.srate);
 %   [EEG.data, zaplineConfig] = clean_data_with_zapline_plus(EEG.data,EEG.srate);
 %   [EEG.data, zaplineConfig, analyticsResults, plothandles] = clean_data_with_zapline_plus(EEG.data,EEG.srate,'adaptiveSigma',0,'chunkLength',200);
 %
-% 
+%
 % See also:
-% 
+%
 %   clean_data_with_zapline_plus_eeglab_wrapper, nt_zapline_plus, iterative_outlier_removal, find_next_noisefreq
 %
-% 
+%
 % Author: Marius Klug, 2021
 
 function [cleanData, zaplineConfig, analyticsResults, plothandles] = clean_data_with_zapline_plus(data, srate, varargin)
@@ -145,14 +149,17 @@ addOptional(p, 'noiseCompDetectSigma', 3, @(x) validateattributes(x,{'numeric'},
 addOptional(p, 'adaptiveSigma', 1, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','adaptiveSigma'));
 addOptional(p, 'minsigma', 2.5, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','minsigma'))
 addOptional(p, 'maxsigma', 4, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','maxsigma'))
-addOptional(p, 'chunkLength', 150, @(x) validateattributes(x,{'numeric'},{'scalar','integer'},'clean_EEG_with_zapline','chunkLength'));
-addOptional(p, 'winSizeCompleteSpectrum', 0, @(x) validateattributes(x,{'numeric'},{'scalar','integer'},'clean_EEG_with_zapline','winSizeCompleteSpectrum'));
+addOptional(p, 'chunkLength', 0, @(x) validateattributes(x,{'numeric'},{'scalar','integer'},'clean_EEG_with_zapline','chunkLength'));
+addOptional(p, 'winSizeCompleteSpectrum', 300, @(x) validateattributes(x,{'numeric'},{'scalar','integer'},'clean_EEG_with_zapline','winSizeCompleteSpectrum'));
 addOptional(p, 'detailedFreqBoundsUpper', [-0.05 0.05], @(x) validateattributes(x,{'numeric'},{'vector'},'clean_EEG_with_zapline','detailedFreqBoundsUpper'))
 addOptional(p, 'detailedFreqBoundsLower', [-0.4 0.1], @(x) validateattributes(x,{'numeric'},{'vector'},'clean_EEG_with_zapline','detailedFreqBoundsLower'))
 addOptional(p, 'nkeep', 0, @(x) validateattributes(x,{'numeric'},{'scalar','integer','positive'},'clean_EEG_with_zapline','nkeep'));
 addOptional(p, 'plotResults', 1, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','plotResults'));
 addOptional(p, 'figBase', 100, @(x) validateattributes(x,{'numeric'},{'scalar','integer','positive'},'clean_EEG_with_zapline','figBase'));
 addOptional(p, 'overwritePlot', 0, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','plotResults'));
+addOptional(p, 'segmentLength', 1, @(x) validateattributes(x,{'numeric'},{'scalar'},'clean_EEG_with_zapline','segmentLength'));
+addOptional(p, 'minChunkLength', 30, @(x) validateattributes(x,{'numeric'},{'scalar'},'clean_EEG_with_zapline','minChunkLength'));
+addOptional(p, 'prominenceQuantile', 0.95, @(x) validateattributes(x,{'numeric'},{'scalar'},'clean_EEG_with_zapline','prominenceQuantile'));
 
 % parse the input
 parse(p,data,srate,varargin{:});
@@ -181,6 +188,9 @@ nkeep = p.Results.nkeep;
 plotResults = p.Results.plotResults;
 figBase = p.Results.figBase;
 overwritePlot = p.Results.overwritePlot;
+segmentLength = p.Results.segmentLength;
+minChunkLength = p.Results.minChunkLength;
+prominenceQuantile = p.Results.prominenceQuantile;
 
 % finalize inputs
 
@@ -206,12 +216,6 @@ if nkeep == 0
     %     disp(['Reducing the number of components to ' num2str(nkeep) ', set the ''nkeep'' flag to decide otherwise.'])
     nkeep = size(data,2);
 end
-if chunkLength == 0
-    chunkLength = size(data,1)/srate;
-end
-if winSizeCompleteSpectrum == 0
-    winSizeCompleteSpectrum = srate*chunkLength;
-end
 
 % create config struct for zapline, also store any additional input for the record
 zaplineConfig.noisefreqs = p.Results.noisefreqs;
@@ -235,17 +239,21 @@ zaplineConfig.winSizeCompleteSpectrum = winSizeCompleteSpectrum;
 zaplineConfig.detailedFreqBoundsUpper = p.Results.detailedFreqBoundsUpper;
 zaplineConfig.detailedFreqBoundsLower = p.Results.detailedFreqBoundsLower;
 zaplineConfig.nkeep = nkeep;
+zaplineConfig.segmentLength = segmentLength;
+zaplineConfig.minChunkLength = minChunkLength;
+zaplineConfig.prominenceQuantile = prominenceQuantile;
+
 
 % initialize results in case no noise frequenc is found
 [pxx_clean_log resSigmaFinal resProportionRemoved resProportionRemovedNoise resProportionRemovedBelowNoise resProportionBelowLower...
-resProportionAboveUpper resRatioNoiseRaw resRatioNoiseClean resNremoveFinal resScores resNoisePeaks resFoundNoise] = deal([]);
+    resProportionAboveUpper resRatioNoiseRaw resRatioNoiseClean resNremoveFinal resScores resNoisePeaks resFoundNoise] = deal([]);
 cleanData = data;
 
 %% Clean each frequency one after another
 
 disp('Computing initial spectrum...')
 % compute spectrum with frequency resolution of winSizeCompleteSpectrum
-[pxx_raw_log,f]=pwelch(data,hanning(winSizeCompleteSpectrum),[],[],srate);
+[pxx_raw_log,f]=pwelch(data,hanning(winSizeCompleteSpectrum*srate),[],[],srate);
 % log transform
 pxx_raw_log = 10*log10(pxx_raw_log);
 
@@ -276,13 +284,89 @@ while i_noisefreq <= length(noisefreqs)
     cleaningTooStongOnce = 0;
     thisZaplineConfig = zaplineConfig;
     
+    if chunkLength ~= 0
+        fprintf('Using fixed chunk length of %.0f seconds!\n', chunkLength)
+        chunkIndices = 1;
+        while chunkIndices(end) < length(data)-chunkLength*2*srate
+            chunkIndices(end+1) = chunkIndices(end)+chunkLength*srate;
+        end
+        chunkIndices(end+1) = length(data)+1;
+    else
+        disp('Using adaptive chunk length!')
+        %% find chunk indices
+        data_narrowfilt = bandpass(data,[noisefreq-detectionWinsize/2 noisefreq+detectionWinsize/2],srate);
+        
+        nSegments = max(floor(size(data_narrowfilt,1)/srate/segmentLength),1);
+        
+        covarianceMatrices = zeros(size(data_narrowfilt,2),size(data_narrowfilt,2),nSegments);
+        
+        %% compute covmatrices
+        for iSegment = 1:nSegments
+            
+            if iSegment ~= nSegments
+                segmentIndices = 1+segmentLength*srate*(iSegment-1):segmentLength*srate*(iSegment);
+            else
+                segmentIndices = 1+segmentLength*srate*(iSegment-1):size(data_narrowfilt,1);
+            end
+            
+            segment = data_narrowfilt(segmentIndices,:);
+            
+            covarianceMatrices(:,:,iSegment) = cov(segment);
+            
+        end
+        
+        %% find distances
+        distances = zeros(nSegments-1,1);
+        
+        for iSegment = 2:nSegments
+            
+            distances(iSegment-1) = sum(pdist(covarianceMatrices(:,:,iSegment)-covarianceMatrices(:,:,iSegment-1)))/2;
+            
+        end
+        
+        %% find peaks
+        [pks,locs,widths,proms] = findpeaks(distances);
+        [pks,locs] = findpeaks(distances,'MinPeakProminence',quantile(proms,prominenceQuantile),'MinPeakDistance',minChunkLength);
+        
+        %% plot
+        
+%         figure;
+%         plot(distances)
+%         
+%         hold on
+%         
+%         plot(locs,pks,'ko')
+        
+        %% create final chunk indices
+        
+        chunkIndices = ones(length(pks)+2,1);
+        
+        chunkIndices(2:end-1) = locs*segmentLength*srate;
+        
+        chunkIndices(end) = length(data)+1;
+        
+        if chunkIndices(2) - chunkIndices(1) < minChunkLength*srate
+            % make sure the last chunk is also min length
+            chunkIndices(2) = [];
+        end
+        
+        if chunkIndices(end) - chunkIndices(end-1) < minChunkLength*srate
+            % make sure the last chunk is also min length
+            chunkIndices(end-1) = [];
+        end
+    end
+    
+    nChunks = length(chunkIndices)-1;
+    
+    fprintf('%.0f chunks will be created.\n', nChunks)
+    
     while ~cleaningDone
         
         % result data matrix
         cleanData = NaN(size(data));
         
         % last chunk must be larger than the others, to ensure fft works, at least 1 chunk must be used
-        nChunks = max(floor(size(data,1)/srate/chunkLength),1);
+        %         nChunks = max(floor(size(data,1)/srate/chunkLength),1);
         scores = NaN(nChunks,nkeep);
         NremoveFinal = NaN(nChunks,1);
         noisePeaks = NaN(nChunks,1);
@@ -291,39 +375,39 @@ while i_noisefreq <= length(noisefreqs)
         for iChunk = 1:nChunks
             
             this_zaplineConfig_chunk = thisZaplineConfig;
-                
+            
             if mod(iChunk,round(nChunks/10))==0
                 disp(['Chunk ' num2str(iChunk) ' of ' num2str(nChunks)])
             end
             
-            if iChunk ~= nChunks
-                chunkIndices = 1+chunkLength*srate*(iChunk-1):chunkLength*srate*(iChunk);
-            else
-                chunkIndices = 1+chunkLength*srate*(iChunk-1):size(data,1);
-            end
+            %             if iChunk ~= nChunks
+            %                 chunkIndices = 1+chunkLength*srate*(iChunk-1):chunkLength*srate*(iChunk);
+            %             else
+            %                 chunkIndices = 1+chunkLength*srate*(iChunk-1):size(data,1);
+            %             end
             
-            chunk = data(chunkIndices,:);
+            chunk = data(chunkIndices(iChunk):chunkIndices(iChunk+1)-1,:);
             
             if searchIndividualNoise
                 % compute spectrum with maximal frequency resolution per chunk to detect individual peaks
                 [pxx_chunk,f]=pwelch(chunk,hanning(length(chunk)),[],[],srate);
                 pxx_chunk = 10*log10(pxx_chunk);
-
+                
                 thisFreqidx = f>noisefreq-(detectionWinsize/2) & f<noisefreq+(detectionWinsize/2);
                 this_freq_idx_detailed = f>noisefreq+detailedFreqBoundsUpper(1) & f<noisefreq+detailedFreqBoundsUpper(2);
                 this_freqs_detailed = f(this_freq_idx_detailed);
-
+                
                 % mean per channels
                 thisFineData = mean(pxx_chunk(thisFreqidx,:),2);
                 % don't look at middle third, but check left and right around target frequency
                 third = round(length(thisFineData)/3);
                 centerThisData = mean(thisFineData([1:third third*2:end]));
-
+                
                 % use lower quantile as indicator of variability, because upper quantiles may be misleading around the noise
                 % frequencies
                 meanLowerQuantileThisData = mean([quantile(thisFineData(1:third),0.05) quantile(thisFineData(third*2:end),0.05)]);
                 detailedNoiseThresh = centerThisData + freqDetectMultFine * (centerThisData - meanLowerQuantileThisData);
-
+                
                 % find peak frequency that is above the threshold
                 maxFinePower = max(mean(pxx_chunk(this_freq_idx_detailed,:),2));
                 noisePeaks(iChunk) = this_freqs_detailed(mean(pxx_chunk(this_freq_idx_detailed,:),2) == maxFinePower);
@@ -331,16 +415,16 @@ while i_noisefreq <= length(noisefreqs)
                 if maxFinePower > detailedNoiseThresh
                     % use adaptive cleaning
                     foundNoise(iChunk) = 1;
-                
+                    
                 else
                     % no noise was found in chunk -> clean with fixed threshold to be sure (it might be a miss of the
                     % detector), but use overall noisefreq
                     noisePeaks(iChunk) = noisefreq;
-
+                    
                     this_zaplineConfig_chunk.adaptiveNremove = 0;
-
+                    
                 end
-            
+                
             else
                 noisePeaks(iChunk) = noisefreq;
             end
@@ -356,11 +440,11 @@ while i_noisefreq <= length(noisefreqs)
             
             % needs to be normalized for zapline
             f_noise = noisePeaks(iChunk)/srate;
-            [cleanData(chunkIndices,:),~,NremoveFinal(iChunk),thisScores] =...
+            [cleanData(chunkIndices(iChunk):chunkIndices(iChunk+1)-1,:),~,NremoveFinal(iChunk),thisScores] =...
                 nt_zapline_plus(chunk,f_noise,thisFixedNremove,this_zaplineConfig_chunk,0);
-
+            
             scores(iChunk,1:length(thisScores)) = thisScores;
-                
+            
             %             [pxx_chunk,f]=pwelch(cleanData(chunkIndices,:),hanning(length(chunk)),[],[],srate);
             %             pxx_chunk = 10*log10(pxx_chunk);
             %             figure; plot(f,mean(pxx_chunk,2));
@@ -371,35 +455,35 @@ while i_noisefreq <= length(noisefreqs)
         disp('Done. Computing spectra...')
         
         % compute spectra
-        [pxx_raw]=pwelch(data,hanning(winSizeCompleteSpectrum),[],[],srate);
+        [pxx_raw]=pwelch(data,hanning(winSizeCompleteSpectrum*srate),[],[],srate);
         pxx_raw_log = 10*log10(pxx_raw);
-        [pxx_clean,f]=pwelch(cleanData,hanning(winSizeCompleteSpectrum),[],[],srate);
+        [pxx_clean,f]=pwelch(cleanData,hanning(winSizeCompleteSpectrum*srate),[],[],srate);
         pxx_clean_log = 10*log10(pxx_clean);
-        [pxx_removed]=pwelch(data-cleanData,hanning(winSizeCompleteSpectrum),[],[],srate);
+        [pxx_removed]=pwelch(data-cleanData,hanning(winSizeCompleteSpectrum*srate),[],[],srate);
         pxx_removed_log = 10*log10(pxx_removed);
         
         % compute analytics
         
         % in original space
-        proportionRemoved = (mean(pxx_raw(:)) - mean(pxx_clean(:)))/ mean(pxx_raw(:)); 
+        proportionRemoved = (mean(pxx_raw(:)) - mean(pxx_clean(:)))/ mean(pxx_raw(:));
         % in log space -> makes more sense to be consistent with visuals, and we argue that the geometric mean is a
         % better measure anyways
-        proportionRemoved = 1-10^((mean(pxx_clean_log(:)) - mean(pxx_raw_log(:)))/10); 
+        proportionRemoved = 1-10^((mean(pxx_clean_log(:)) - mean(pxx_raw_log(:)))/10);
         disp(['proportion of removed power: ' num2str(proportionRemoved)]);
         
         this_freq_idx_belownoise = f>=max(noisefreq-11,0) & f<=noisefreq-1;
         proportionRemovedBelowNoise = (mean(pxx_raw(this_freq_idx_belownoise,:),'all') - mean(pxx_clean(this_freq_idx_belownoise,:),'all')) /...
-            mean(pxx_raw(this_freq_idx_belownoise,:),'all'); 
+            mean(pxx_raw(this_freq_idx_belownoise,:),'all');
         proportionRemovedBelowNoise = 1-10^((mean(pxx_clean_log(this_freq_idx_belownoise,:),'all') - mean(pxx_raw_log(this_freq_idx_belownoise,:),'all'))/10);
         
         (mean(pxx_raw_log(this_freq_idx_belownoise,:),'all') - mean(pxx_clean(this_freq_idx_belownoise,:),'all')) /...
-            mean(pxx_raw(this_freq_idx_belownoise,:),'all'); 
+            mean(pxx_raw(this_freq_idx_belownoise,:),'all');
         disp(['proportion of removed power below noise frequency: ' num2str(proportionRemovedBelowNoise)]);
         
         this_freq_idx_noise = f>noisefreq+detailedFreqBoundsUpper(1) & f<noisefreq+detailedFreqBoundsUpper(2);
         proportionRemovedNoise = (mean(pxx_raw(this_freq_idx_noise,:),'all') - mean(pxx_clean(this_freq_idx_noise,:),'all')) /...
-            mean(pxx_raw(this_freq_idx_noise,:),'all'); 
-        proportionRemovedNoise = 1-10^((mean(pxx_clean_log(this_freq_idx_noise,:),'all') - mean(pxx_raw_log(this_freq_idx_noise,:),'all'))/10); 
+            mean(pxx_raw(this_freq_idx_noise,:),'all');
+        proportionRemovedNoise = 1-10^((mean(pxx_clean_log(this_freq_idx_noise,:),'all') - mean(pxx_raw_log(this_freq_idx_noise,:),'all'))/10);
         disp(['proportion of removed power at noise frequency: ' num2str(proportionRemovedNoise)]);
         
         this_freq_idx_noise_surrounding = (f>noisefreq-(detectionWinsize/2) & f<noisefreq-(detectionWinsize/6)) |...
@@ -449,6 +533,13 @@ while i_noisefreq <= length(noisefreqs)
         if plotResults
             
             %%
+            chunkIndicesPlot = chunkIndices/srate/60; % for plotting convert to minutes
+            chunkIndicesPlotIndividual = [];
+            for i_chunk = 1:length(chunkIndicesPlot)-1
+                chunkIndicesPlotIndividual(i_chunk) = mean([chunkIndicesPlot(i_chunk),chunkIndicesPlot(i_chunk+1)]);
+            end
+            
+            
             red = [230 100 50]/256;
             green = [0 97 100]/256;
             grey = [0.2 0.2 0.2];
@@ -463,7 +554,9 @@ while i_noisefreq <= length(noisefreqs)
             plot(f(this_freq_idx_plot),mean(pxx_raw_log(this_freq_idx_plot,:),2),'color',grey)
             xlim([f(find(this_freq_idx_plot,1,'first'))-0.01 f(find(this_freq_idx_plot,1,'last'))])
             
-            ylim([min(mean(pxx_raw_log(this_freq_idx_plot,:),2))-0.5 min(mean(pxx_raw_log(this_freq_idx_plot,:),2))+coarseFreqDetectPowerDiff*2])
+            
+            ylim([remainingNoiseThreshLower-0.25*(remainingNoiseThreshUpper-remainingNoiseThreshLower)
+                min(mean(pxx_raw_log(this_freq_idx_plot,:),2))+coarseFreqDetectPowerDiff*2])
             box off
             
             hold on
@@ -477,45 +570,65 @@ while i_noisefreq <= length(noisefreqs)
             ylabel('Power [10*log10 \muV^2/Hz]')
             set(gca,'fontsize',12)
             
+            
             % plot nremoved
             pos = 8:17;
-            subplot(24,60,[pos pos+30]*2-1);
-            
-            plot(NremoveFinal,'color',grey)
-            xlim([0.8 length(NremoveFinal)])
-            ylim([0 max(NremoveFinal)+1])
-            title({['# removed comps per ' num2str(chunkLength)...
-                's chunk, \mu = ' num2str(round(mean(NremoveFinal),2))]})
-            set(gca,'fontsize',12)
+            subplot(24,60,[pos pos+30]*2-1);cla
             hold on
-            if searchIndividualNoise
-                foundNoisePlot = foundNoise;
-                foundNoisePlot(foundNoisePlot==1) = NaN;
-                foundNoisePlot(~isnan(foundNoisePlot)) = NremoveFinal(~isnan(foundNoisePlot));
-                plot(foundNoisePlot,'o','color',green);
+            
+            for i_chunk = 1:length(chunkIndicesPlot)-1
+
+                if ~searchIndividualNoise || foundNoise(i_chunk)
+                    fill([chunkIndicesPlot(i_chunk) chunkIndicesPlot(i_chunk) chunkIndicesPlot(i_chunk+1) chunkIndicesPlot(i_chunk+1)],...
+                        [0 NremoveFinal(i_chunk) NremoveFinal(i_chunk) 0],grey,'facealpha',0.5)
+                else
+                    nonoisehandle = fill([chunkIndicesPlot(i_chunk) chunkIndicesPlot(i_chunk) chunkIndicesPlot(i_chunk+1) chunkIndicesPlot(i_chunk+1)],...
+                        [0 NremoveFinal(i_chunk) NremoveFinal(i_chunk) 0],green,'facealpha',0.5);
+                end
             end
+            
+            xlim([chunkIndicesPlot(1) chunkIndicesPlot(end)])
+            ylim([0 max(NremoveFinal)+1])
+            title({['# removed comps in ' num2str(nChunks)...
+                ' chunks, \mu = ' num2str(round(mean(NremoveFinal),2))]})
+            set(gca,'fontsize',12)
+%             if searchIndividualNoise
+%                 foundNoisePlot = foundNoise;
+%                 foundNoisePlot(foundNoisePlot==1) = NaN;
+%                 foundNoisePlot(~isnan(foundNoisePlot)) = NremoveFinal(~isnan(foundNoisePlot));
+%                 plot(chunkIndicesPlotIndividual,foundNoisePlot,'o','color',green);
+%             end
             box off
             
             % plot noisepeaks
-            subplot(24*2,60,[pos+30*9 pos+30*10 pos+30*11 pos+30*12]*2-1); % lol dont judge me it works
+            subplot(24*2,60,[pos+30*9 pos+30*10 pos+30*11 pos+30*12]*2-1);cla % lol dont judge me it works
+            hold on
             
-            plot(noisePeaks,'color',grey)
-            xlim([0.8 length(NremoveFinal)])
+            for i_chunk = 1:length(chunkIndicesPlot)-2
+                plot([chunkIndicesPlot(i_chunk+1) chunkIndicesPlot(i_chunk+1)],[0 1000],'color',grey*3)
+%                     fill([chunkIndicesPlot(i_chunk) chunkIndicesPlot(i_chunk) chunkIndicesPlot(i_chunk+1) chunkIndicesPlot(i_chunk+1)],...
+%                         [noisePeaks(i_chunk) noisePeaks(i_chunk) noisePeaks(i_chunk) noisePeaks(i_chunk)],grey)
+            end
+            
+            plot(chunkIndicesPlotIndividual,[noisePeaks],'color',grey)
+            xlim([chunkIndicesPlot(1) chunkIndicesPlot(end)])
             maxdiff = max([(max(noisePeaks))-noisefreq noisefreq-(min(noisePeaks))]);
             if maxdiff == 0
                 maxdiff = 0.01;
             end
             ylim([noisefreq-maxdiff*1.5 noisefreq+maxdiff*1.5])
-            xlabel('chunk')
+            xlabel('time [minutes]')
             title({['individual noise frequencies [Hz]']})
-            hold on
             if searchIndividualNoise
-            foundNoisePlot = foundNoise;
-            foundNoisePlot(foundNoisePlot==1) = NaN;
-            foundNoisePlot(~isnan(foundNoisePlot)) = noisePeaks(~isnan(foundNoisePlot));
-            linehandle = plot(foundNoisePlot,'o','color',green);
-                l = legend(linehandle,{'no clear noise peak found'},'edgecolor',[0.8 0.8 0.8],'position',...
-                    [0.368923614106865 0.805246914159736 0.127083330337579 0.023148147568658]);
+                foundNoisePlot = foundNoise;
+                foundNoisePlot(foundNoisePlot==1) = NaN;
+                foundNoisePlot(~isnan(foundNoisePlot)) = noisePeaks(~isnan(foundNoisePlot));
+                plot(chunkIndicesPlotIndividual,foundNoisePlot,'o','color',green);
+                
+                if exist('nonoisehandle','var')
+                    legend(nonoisehandle,{'no clear noise peak found'},'edgecolor',[0.8 0.8 0.8],'position',...
+                        [0.368923614106865 0.805246914159736 0.127083330337579 0.023148147568658]);
+                end
             end
             box off
             set(gca,'fontsize',12)
@@ -535,10 +648,11 @@ while i_noisefreq <= length(noisefreqs)
             % plot new power
             subplot(3,30,[26:30]);
             
+            hold on
             plot(f(this_freq_idx_plot),mean(pxx_clean_log(this_freq_idx_plot,:),2),'color', green)
             
             xlim([f(find(this_freq_idx_plot,1,'first'))-0.01 f(find(this_freq_idx_plot,1,'last'))])
-            hold on
+            
             
             try
                 % this wont work if the frequency resolution is too low
@@ -551,8 +665,8 @@ while i_noisefreq <= length(noisefreqs)
                     'location','north','edgecolor',[0.8 0.8 0.8])
             end
             ylim([remainingNoiseThreshLower-0.25*(remainingNoiseThreshUpper-remainingNoiseThreshLower)
-                remainingNoiseThreshUpper+(remainingNoiseThreshUpper-remainingNoiseThreshLower)])
-            
+                min(mean(pxx_raw_log(this_freq_idx_plot,:),2))+coarseFreqDetectPowerDiff*2])
+           
             
             xlabel('frequency')
             ylabel('Power [10*log10 \muV^2/Hz]')
@@ -566,8 +680,8 @@ while i_noisefreq <= length(noisefreqs)
             pos = [11:14 21:24];
             ax1 = subplot(60,10,[pos+60*4 pos+60*5 pos+60*6 pos+60*7 pos+60*8 pos+60*9]);
             hold on
-            cla 
-%             singlehandles = plot(f,pxx_raw_log,'color',[0.8 0.8 0.8]);
+            cla
+            %             singlehandles = plot(f,pxx_raw_log,'color',[0.8 0.8 0.8]);
             meanhandles = plot(f,mean(pxx_raw_log,2),'color',grey,'linewidth',1.5);
             set(gca,'ygrid','on','xgrid','on');
             set(gca,'yminorgrid','on')
@@ -585,8 +699,8 @@ while i_noisefreq <= length(noisefreqs)
             ax2 = subplot(60,10,[pos+60*4 pos+60*5 pos+60*6 pos+60*7 pos+60*8 pos+60*9]);
             hold on
             
-%             plot(f/(f_noise*srate),pxx_removed_log,'color',[0.95 0.85 0.75]);
-%             plot(f/(f_noise*srate),pxx_clean_log,'color',[0.7 0.8 0.82]);
+            %             plot(f/(f_noise*srate),pxx_removed_log,'color',[0.95 0.85 0.75]);
+            %             plot(f/(f_noise*srate),pxx_clean_log,'color',[0.7 0.8 0.82]);
             removedhandle = plot(f/(f_noise*srate),mean(pxx_removed_log,2),'color',red,'linewidth',1.5);
             cleanhandle = plot(f/(f_noise*srate),mean(pxx_clean_log,2),'color',green,'linewidth',1.5);
             
@@ -600,7 +714,7 @@ while i_noisefreq <= length(noisefreqs)
             ylimits2=get(gca,'ylim');
             ylimits(1)=min(ylimits1(1),ylimits2(1)); ylimits(2)=max(ylimits1(2),ylimits2(2));
             title({['removed power at noise frequency: ' num2str(proportionRemovedNoise*100) '%']
-            ['ratio of noise to surroundings: ' num2str(ratioNoiseClean)]})
+                ['ratio of noise to surroundings: ' num2str(ratioNoiseClean)]})
             
             ylim(ax1,ylimits);
             ylim(ax2,ylimits);
@@ -613,7 +727,7 @@ while i_noisefreq <= length(noisefreqs)
             
             freqhandles = fill(ax1,[0 minfreq minfreq 0],[ylimits(1) ylimits(1) ylimits(2) ylimits(2)],[0 0 0],'facealpha',0.1,'edgealpha',0);
             fill(ax1,[maxfreq max(f) max(f) maxfreq],[ylimits(1) ylimits(1) ylimits(2) ylimits(2)],[0 0 0],'facealpha',0.1,'edgealpha',0)
-%             legend(ax1,[meanhandles singlehandles(1) freqhandles],{'raw data (mean)','raw data (single channels)','below min / above max freq'},'edgecolor',[0.8 0.8 0.8]);
+            %             legend(ax1,[meanhandles singlehandles(1) freqhandles],{'raw data (mean)','raw data (single channels)','below min / above max freq'},'edgecolor',[0.8 0.8 0.8]);
             legend(ax1,[meanhandles freqhandles],{'raw data','below min / above max freq'},'edgecolor',[0.8 0.8 0.8]);
             
             fill(ax2,[0 minfreq minfreq 0]/noisefreq,[ylimits(1) ylimits(1) ylimits(2) ylimits(2)],[0 0 0],'facealpha',0.1,'edgealpha',0)
