@@ -133,8 +133,8 @@ if p.adaptiveNremove == 1
     end
     
     if nremove>length(scores)/5
-        fprintf('Nremove is larger than 1/5th of the components, using that (%d)!\n',round(size(x,2)/5));
-        nremove = round(size(x,2)/5);
+        fprintf('Nremove is larger than 1/5th of the components, using that (%d)!\n',round(length(scores)/5));
+        nremove = round(length(scores)/5);
     end
         
 end
