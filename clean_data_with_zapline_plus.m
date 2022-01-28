@@ -11,7 +11,7 @@
 %
 % Usage:
 %
-%   >>  [cleanData, zaplineConfig, resNremoveFinal, resScores, resNoisePeaks, resFoundNoise, plothandles] = clean_data_with_zapline_plus(data, srate, varargin);
+%   >>  [cleanData, zaplineConfig, analyticsResults, plothandles] = clean_data_with_zapline_plus(data,srate,varargin);
 %
 %
 % Required Inputs:
