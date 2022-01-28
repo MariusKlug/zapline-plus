@@ -3,6 +3,16 @@ Improvements of the ZapLine function to remove line noise from EEG/MEG data. Add
 
 Dependencies of Noisetools are provided with permission by Alain de Cheveigné. Please visit the original repository for more info and additional noise removal tools: http://audition.ens.fr/adc/NoiseTools/
 
+# Quick start
+```matlab
+cleanedData = clean_data_with_zapline_plus(data,srate);
+```
+
+Or if you live in the EEGlab universe:
+```matlab
+EEG = clean_data_with_zapline_plus_eeglab_wrapper(EEG,struct('noisefreqs',[50])) % specifying the config is optional
+```
+
 # Please cite
 
 Original Zapline paper: Cheveigné, Alain de. 2020. “ZapLine: A Simple and Effective Method to Remove Power Line Artifacts.” NeuroImage 207 (February): 116356. https://www.sciencedirect.com/science/article/pii/S1053811919309474
