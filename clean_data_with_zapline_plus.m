@@ -7,8 +7,6 @@
 % Based on: de Cheveigne, A. (2020) ZapLine: a simple and effective method to remove power line artifacts.
 % NeuroImage, 1, 1-13.
 %
-% Requires noisetools to be installed: http://audition.ens.fr/adc/NoiseTools/
-%
 % Usage:
 %
 %   >>  [cleanData, zaplineConfig, resNremoveFinal, resScores, resNoisePeaks, resFoundNoise, plothandles] = clean_data_with_zapline_plus(data, srate, varargin);
