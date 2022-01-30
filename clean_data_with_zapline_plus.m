@@ -544,7 +544,7 @@ while i_noisefreq <= length(noisefreqs)
             
             this_freq_idx_plot = f>=noisefreq-1.1 & f<=noisefreq+1.1;
             plothandles(i_noisefreq) = figure(figThis);
-            clf; set(gcf,'color','w','Position',[0 0 1500 850])
+            clf; set(gcf,'Color','w','InvertHardCopy','off', 'units','normalized','outerposition',[0 0 1 1])
             
             % plot original power
             subplot(3,30,[1:5]);
