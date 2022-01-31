@@ -57,7 +57,7 @@
 %   chunkLength                     - length of chunks to be cleaned in seconds. if set to 0, automatic chunks will be used.
 %                                       (default = 0)
 %   segmentLength                   - length of the segments for automatic chunk detection in seconds (default = 1)
-%   minChunkLength                  - minimum chunk length of automatic chunk detection in seconds (default = 15)
+%   minChunkLength                  - minimum chunk length of automatic chunk detection in seconds (default = 30)
 %   prominenceQuantile              - quantile of the prominence (difference bewtween peak and through) for peak 
 %                                       detection of channel covariance for new chunks (default = 0.95)
 %   winSizeCompleteSpectrum         - window size in samples of the pwelch function to compute the spectrum of the complete dataset
@@ -112,6 +112,8 @@ disp('---------------- PLEASE CITE ------------------')
 disp(' ')
 disp('de Cheveigne, A. (2020) ZapLine: a simple and effective method to remove power line artifacts. NeuroImage, 1, 1-13.')
 disp(' ')
+disp('Klug, M., and N. A. Kloosterman. (2021) Zapline-plus: A Zapline Extension for Automatic and Adaptive Removal of Frequency-Specific Noise Artifacts in M/EEG. bioRxiv. https://www.biorxiv.org/content/10.1101/2021.10.18.464805.abstract.')
+disp(' ')
 disp('---------------- PLEASE CITE ------------------')
 
 % if the input is a struct, e.g. another zaplineConfig output, create new varargin array with all struct fields to be
@@ -156,6 +158,7 @@ addOptional(p, 'detailedFreqBoundsLower', [-0.4 0.1], @(x) validateattributes(x,
 addOptional(p, 'nkeep', 0, @(x) validateattributes(x,{'numeric'},{'scalar','integer','positive'},'clean_EEG_with_zapline','nkeep'));
 addOptional(p, 'plotResults', 1, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','plotResults'));
 addOptional(p, 'figBase', 100, @(x) validateattributes(x,{'numeric'},{'scalar','integer','positive'},'clean_EEG_with_zapline','figBase'));
+addOptional(p, 'figPos', [], @(x) validateattributes(x,{'numeric'},{'vector'},'clean_EEG_with_zapline','figPos'));
 addOptional(p, 'overwritePlot', 0, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','plotResults'));
 addOptional(p, 'segmentLength', 1, @(x) validateattributes(x,{'numeric'},{'scalar'},'clean_EEG_with_zapline','segmentLength'));
 addOptional(p, 'minChunkLength', 30, @(x) validateattributes(x,{'numeric'},{'scalar'},'clean_EEG_with_zapline','minChunkLength'));
@@ -187,6 +190,7 @@ detailedFreqBoundsLower = p.Results.detailedFreqBoundsLower;
 nkeep = p.Results.nkeep;
 plotResults = p.Results.plotResults;
 figBase = p.Results.figBase;
+figPos = p.Results.figPos;
 overwritePlot = p.Results.overwritePlot;
 segmentLength = p.Results.segmentLength;
 minChunkLength = p.Results.minChunkLength;
@@ -195,10 +199,10 @@ prominenceQuantile = p.Results.prominenceQuantile;
 % finalize inputs
 
 if srate > 500
-    warning(sprintf(['\n--------------------------------------- WARNING ----------------------------------------',...
-        '\n\nIt is recommended to downsample the data to 250Hz or 500Hz before applying Zapline-plus!\n\n',...
-        '                               Results may be suboptimal!\n\n',...
-        '--------------------------------------- WARNING ----------------------------------------']))
+    warning(sprintf(['\n--------------------------------------- WARNING -----------------------------------------------',...
+        '\n\nIt is recommended to downsample the data to around 250Hz to 500Hz before applying Zapline-plus!\n\n',...
+        '                      Current srate is ' num2str(srate) '. Results may be suboptimal!\n\n',...
+        '--------------------------------------- WARNING -----------------------------------------------']))
 end
 
 while ~overwritePlot && ishandle(figBase+1)
@@ -545,8 +549,12 @@ while i_noisefreq <= length(noisefreqs)
             grey = [0.2 0.2 0.2];
             
             this_freq_idx_plot = f>=noisefreq-1.1 & f<=noisefreq+1.1;
-            plothandles(i_noisefreq) = figure(figThis);
-            clf; set(gcf,'color','w','Position',[0 0 1500 850])
+            plothandles(i_noisefreq) = figure(figThis);clf; 
+            if ~isempty(figPos)
+                set(gcf,'color','w','Position',figPos) % e.g. figpos = [0 0 1500 850] 
+            else
+                set(gcf,'Color','w','InvertHardCopy','off', 'units','normalized','outerposition',[0 0 1 1])
+            end
             
             % plot original power
             subplot(3,30,[1:5]);

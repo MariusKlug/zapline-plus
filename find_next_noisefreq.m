@@ -32,6 +32,8 @@ i_end = find(f<maxfreq,1,'last');
 
 noisefreq = [];
 threshfound = [];
+thisfreqs = [];
+thisdata = [];
 winsize = round(size(pxx,1)/(max(f) - min(f))*winsizeHz);
 meandata = mean(pxx,2);
 
