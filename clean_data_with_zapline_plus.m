@@ -31,7 +31,7 @@
 %                                       (default = 99)
 %   detectionWinsize                - window size in Hz for detection of noise peaks (default 6Hz)
 %   coarseFreqDetectPowerDiff       - threshold in 10*log10 scale above the average of the spectrum to detect a peak as
-%                                       noise freq. (default = 4, meaning a 2.5 x increase of the power over the mean)
+%                                       noise freq. (default = 7, meaning a 5 x increase of the power over the mean)
 %   coarseFreqDetectLowerPowerDiff  - threshold in 10*log10 scale above the average of the spectrum to detect the end of
 %                                       a noise freq peak. (default = 1.76, meaning a 1.5 x increase of the power over the mean)
 %   searchIndividualNoise           - bool whether or not individual noise peaks should be used instead of the specified
@@ -51,7 +51,7 @@
 %   adaptiveSigma                   - bool. if automatic adaptation of noiseCompDetectSigma should be used. Also adapts
 %                                       fixedNremove when cleaning becomes stricter. (default = 1)
 %   minsigma                        - minimum when adapting noiseCompDetectSigma. (default = 2.5)
-%   maxsigma                        - maximum when adapting noiseCompDetectSigma. (default = 4)
+%   maxsigma                        - maximum when adapting noiseCompDetectSigma. (default = 5)
 %   chunkLength                     - length of chunks to be cleaned in seconds. if set to 0, automatic chunks will be used.
 %                                       (default = 0)
 %   segmentLength                   - length of the segments for automatic chunk detection in seconds (default = 1)
@@ -138,7 +138,7 @@ addOptional(p, 'fixedNremove', 1, @(x) validateattributes(x,{'numeric'},{'intege
 addOptional(p, 'minfreq', 17, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','minfreq'))
 addOptional(p, 'maxfreq', 99, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','maxfreq'))
 addOptional(p, 'detectionWinsize', 6, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','detectionWinsize'))
-addOptional(p, 'coarseFreqDetectPowerDiff', 4, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','coarseFreqDetectPowerDiff'))
+addOptional(p, 'coarseFreqDetectPowerDiff', 7, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','coarseFreqDetectPowerDiff'))
 addOptional(p, 'coarseFreqDetectLowerPowerDiff', 1.76091259055681, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','coarseFreqDetectLowerPowerDiff'))
 addOptional(p, 'searchIndividualNoise', 1, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','searchIndividualNoise'));
 addOptional(p, 'freqDetectMultFine', 2, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','freqDetectMultFine'))
@@ -148,7 +148,7 @@ addOptional(p, 'adaptiveNremove', 1, @(x) validateattributes(x,{'numeric','logic
 addOptional(p, 'noiseCompDetectSigma', 3, @(x) validateattributes(x,{'numeric'},{'scalar','positive'},'clean_EEG_with_zapline','noiseCompDetectSigma'));
 addOptional(p, 'adaptiveSigma', 1, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','adaptiveSigma'));
 addOptional(p, 'minsigma', 2.5, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','minsigma'))
-addOptional(p, 'maxsigma', 4, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','maxsigma'))
+addOptional(p, 'maxsigma', 5, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','maxsigma'))
 addOptional(p, 'chunkLength', 0, @(x) validateattributes(x,{'numeric'},{'scalar','integer'},'clean_EEG_with_zapline','chunkLength'));
 addOptional(p, 'winSizeCompleteSpectrum', 300, @(x) validateattributes(x,{'numeric'},{'scalar','integer'},'clean_EEG_with_zapline','winSizeCompleteSpectrum'));
 addOptional(p, 'detailedFreqBoundsUpper', [-0.05 0.05], @(x) validateattributes(x,{'numeric'},{'vector'},'clean_EEG_with_zapline','detailedFreqBoundsUpper'))
@@ -203,6 +203,8 @@ if srate > 500
         '--------------------------------------- WARNING -----------------------------------------------']))
 end
 
+
+
 while ~overwritePlot && ishandle(figBase+1)
     figBase = figBase+100;
 end
@@ -211,6 +213,14 @@ transposeData = size(data,2)>size(data,1);
 if transposeData
     data = data';
 end
+
+if winSizeCompleteSpectrum*srate < size(data,1)
+    
+    winSizeCompleteSpectrum = floor(length(data)/srate);
+    warning('Data set is short, results may be suboptimal!')
+    
+end
+
 if nkeep == 0
     % our tests show actually better cleaning performance when no PCA reduction is used!
     
