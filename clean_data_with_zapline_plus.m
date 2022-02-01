@@ -161,6 +161,7 @@ addOptional(p, 'overwritePlot', 0, @(x) validateattributes(x,{'numeric','logical
 addOptional(p, 'segmentLength', 1, @(x) validateattributes(x,{'numeric'},{'scalar'},'clean_EEG_with_zapline','segmentLength'));
 addOptional(p, 'minChunkLength', 30, @(x) validateattributes(x,{'numeric'},{'scalar'},'clean_EEG_with_zapline','minChunkLength'));
 addOptional(p, 'prominenceQuantile', 0.95, @(x) validateattributes(x,{'numeric'},{'scalar'},'clean_EEG_with_zapline','prominenceQuantile'));
+addOptional(p, 'saveSpectra', 0, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','saveSpectra'));
 
 % parse the input
 parse(p,data,srate,varargin{:});
@@ -193,6 +194,7 @@ overwritePlot = p.Results.overwritePlot;
 segmentLength = p.Results.segmentLength;
 minChunkLength = p.Results.minChunkLength;
 prominenceQuantile = p.Results.prominenceQuantile;
+saveSpectra = p.Results.saveSpectra;
 
 % finalize inputs
 
@@ -270,8 +272,10 @@ disp('Computing initial spectrum...')
 pxx_raw_log = 10*log10(pxx_raw_log);
 
 % store initial raw spectrum
-analyticsResults.rawSpectrumLog = pxx_raw_log;
-analyticsResults.frequencies = f;
+if saveSpectra
+    analyticsResults.rawSpectrumLog = pxx_raw_log;
+    analyticsResults.frequencies = f;
+end
 
 automaticFreqDetection = isempty(noisefreqs);
 if automaticFreqDetection
@@ -858,7 +862,9 @@ end
 
 zaplineConfig.noisefreqs = noisefreqs;
 
-analyticsResults.cleanSpectrumLog = pxx_clean_log;
+if saveSpectra
+    analyticsResults.cleanSpectrumLog = pxx_clean_log;
+end
 analyticsResults.sigmaFinal = resSigmaFinal;
 analyticsResults.proportionRemoved = resProportionRemoved;
 analyticsResults.proportionRemovedNoise = resProportionRemovedNoise;
