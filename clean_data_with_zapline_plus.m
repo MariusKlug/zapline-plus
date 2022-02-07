@@ -216,7 +216,7 @@ if transposeData
     data = data';
 end
 
-if winSizeCompleteSpectrum*srate < size(data,1)
+if winSizeCompleteSpectrum*srate > size(data,1)
     
     winSizeCompleteSpectrum = floor(length(data)/srate);
     warning('Data set is short, results may be suboptimal!')
