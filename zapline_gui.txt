@@ -1,0 +1,16 @@
+noisefreqs
+Noise frequency (empty is automatic)
+- 50 or 60  or auto
+- Enter exact
+
+Checbox
+- Divide data in chunks (Zapline-plus method)
+chunkLength to 0 if set, unset to 9999999999999999999
+
+Checbox
+- Automatic selection of the minimum number of noise components (Zapline-plus method)
+adaptiveNremove to 0 or 1
+
+Edit
+- Set the number of components to remove
+fixedNremove default to 1 if adaptiveNremove is select otherwise should be 3
