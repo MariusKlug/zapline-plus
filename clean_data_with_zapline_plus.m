@@ -262,6 +262,7 @@ zaplineConfig.prominenceQuantile = prominenceQuantile;
 [pxx_clean_log resSigmaFinal resProportionRemoved resProportionRemovedNoise resProportionRemovedBelowNoise resProportionBelowLower...
     resProportionAboveUpper resRatioNoiseRaw resRatioNoiseClean resNremoveFinal resScores resNoisePeaks resFoundNoise] = deal([]);
 cleanData = data;
+plothandles = [];
 
 %% Clean each frequency one after another
 
