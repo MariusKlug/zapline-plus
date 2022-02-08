@@ -265,6 +265,17 @@ cleanData = data;
 
 %% Clean each frequency one after another
 
+% find flat channels and store, remove from dataset to work on
+
+diffdata = diff(data);
+flat_channels_idx = find(all(diffdata==0));
+if ~isempty(flat_channels_idx)
+    warning(['Flat channels detected (will be ignored and added back in after Zapline-plus processing): ' num2str(flat_channels_idx)])
+    flat_channels_data = data(:,flat_channels_idx);
+    
+    data(:,flat_channels_idx) = [];
+end
+
 disp('Computing initial spectrum...')
 % compute spectrum with frequency resolution of winSizeCompleteSpectrum
 [pxx_raw_log,f]=pwelch(data,hanning(winSizeCompleteSpectrum*srate),[],[],srate);
@@ -404,6 +415,17 @@ while i_noisefreq <= length(noisefreqs)
             
             chunk = data(chunkIndices(iChunk):chunkIndices(iChunk+1)-1,:);
             
+            % find flat channels and store, remove from dataset to work on
+
+            diffchunk = diff(chunk);
+            flat_channels_idx_chunk = find(all(diffchunk==0));
+            if ~isempty(flat_channels_idx_chunk)
+                warning(['Chunk ' num2str(iChunk) ': Flat channels detected in chunk (will be ignored and added back in after Zapline-plus processing): ' num2str(flat_channels_idx_chunk)])
+                flat_channels_data_chunk = chunk(:,flat_channels_idx_chunk);
+
+                chunk(:,flat_channels_idx_chunk) = [];
+            end
+            
             if searchIndividualNoise
                 % compute spectrum with maximal frequency resolution per chunk to detect individual peaks
                 [pxx_chunk,f]=pwelch(chunk,hanning(length(chunk)),[],[],srate);
@@ -456,7 +478,9 @@ while i_noisefreq <= length(noisefreqs)
             
             % needs to be normalized for zapline
             f_noise = noisePeaks(iChunk)/srate;
-            [cleanData(chunkIndices(iChunk):chunkIndices(iChunk+1)-1,:),~,NremoveFinal(iChunk),thisScores] =...
+            
+            % apply Zapline
+            [cleanData_chunk,~,NremoveFinal(iChunk),thisScores] =...
                 nt_zapline_plus(chunk,f_noise,thisFixedNremove,this_zaplineConfig_chunk,0);
             
             scores(iChunk,1:length(thisScores)) = thisScores;
@@ -466,6 +490,34 @@ while i_noisefreq <= length(noisefreqs)
             %             figure; plot(f,mean(pxx_chunk,2));
             %             xlim([f(find(this_freq_idx,1,'first')) f(find(this_freq_idx,1,'last'))])
             %             title(['chunk ' num2str(iChunk) ', ' num2str(noisePeaks(iChunk)) ', ' num2str(NremoveFinal(iChunk)) ' removed'])
+            
+            % add flat channels back in
+            if ~isempty(flat_channels_idx_chunk)
+%                 warning(['Chunk ' num2str(iChunk) ': Detected flat channels in chunk were ignored and are added back in after Zapline plus processing: ' num2str(flat_channels_idx_chunk)])
+
+                fullCleanData_chunk = [];
+
+                i_last = 1;
+                i_last_clean = 1;
+
+                for i_flatchan = 1:length(flat_channels_idx_chunk)
+
+                    flatchan = flat_channels_idx_chunk(i_flatchan);
+                    fullCleanData_chunk(:,i_last:flatchan-1) = cleanData_chunk(:,i_last_clean:flatchan-i_flatchan);
+                    fullCleanData_chunk(:,flatchan) = flat_channels_data_chunk(:,i_flatchan);
+
+                    i_last = flatchan+1;
+                    i_last_clean = flatchan-i_flatchan+1;
+
+                end
+
+                fullCleanData_chunk(:,i_last:size(cleanData_chunk,2)+length(flat_channels_idx_chunk)) = cleanData_chunk(:,i_last_clean:end);
+
+                cleanData_chunk = fullCleanData_chunk;
+
+            end
+            
+            cleanData(chunkIndices(iChunk):chunkIndices(iChunk+1)-1,:) = cleanData_chunk;
             
         end
         disp('Done. Computing spectra...')
@@ -834,6 +886,32 @@ while i_noisefreq <= length(noisefreqs)
         end
     end
     i_noisefreq = i_noisefreq + 1;
+    
+end
+
+% add flat channels back in
+if ~isempty(flat_channels_idx)
+    warning(['Detected flat channels were ignored and are added back in after Zapline plus processing: ' num2str(flat_channels_idx)])
+    
+    fullCleanData = [];
+    
+    i_last = 1;
+    i_last_clean = 1;
+    
+    for i_flatchan = 1:length(flat_channels_idx)
+        
+        flatchan = flat_channels_idx(i_flatchan);
+        fullCleanData(:,i_last:flatchan-1) = cleanData(:,i_last_clean:flatchan-i_flatchan);
+        fullCleanData(:,flatchan) = flat_channels_data(:,i_flatchan);
+        
+        i_last = flatchan+1;
+        i_last_clean = flatchan-i_flatchan+1;
+        
+    end
+    
+    fullCleanData(:,i_last:size(cleanData,2)+length(flat_channels_idx)) = cleanData(:,i_last_clean:end);
+        
+    cleanData = fullCleanData;
     
 end
 
