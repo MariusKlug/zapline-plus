@@ -7,11 +7,9 @@
 % Based on: de Cheveigne, A. (2020) ZapLine: a simple and effective method to remove power line artifacts.
 % NeuroImage, 1, 1-13.
 %
-% Requires noisetools to be installed: http://audition.ens.fr/adc/NoiseTools/
-%
 % Usage:
 %
-%   >>  [cleanData, zaplineConfig, resNremoveFinal, resScores, resNoisePeaks, resFoundNoise, plothandles] = clean_data_with_zapline_plus(data, srate, varargin);
+%   >>  [cleanData, zaplineConfig, analyticsResults, plothandles] = clean_data_with_zapline_plus(data,srate,varargin);
 %
 %
 % Required Inputs:
@@ -33,7 +31,7 @@
 %                                       (default = 99)
 %   detectionWinsize                - window size in Hz for detection of noise peaks (default 6Hz)
 %   coarseFreqDetectPowerDiff       - threshold in 10*log10 scale above the average of the spectrum to detect a peak as
-%                                       noise freq. (default = 4, meaning a 2.5 x increase of the power over the mean)
+%                                       noise freq. (default = 7, meaning a 5 x increase of the power over the mean)
 %   coarseFreqDetectLowerPowerDiff  - threshold in 10*log10 scale above the average of the spectrum to detect the end of
 %                                       a noise freq peak. (default = 1.76, meaning a 1.5 x increase of the power over the mean)
 %   searchIndividualNoise           - bool whether or not individual noise peaks should be used instead of the specified
@@ -53,11 +51,11 @@
 %   adaptiveSigma                   - bool. if automatic adaptation of noiseCompDetectSigma should be used. Also adapts
 %                                       fixedNremove when cleaning becomes stricter. (default = 1)
 %   minsigma                        - minimum when adapting noiseCompDetectSigma. (default = 2.5)
-%   maxsigma                        - maximum when adapting noiseCompDetectSigma. (default = 4)
+%   maxsigma                        - maximum when adapting noiseCompDetectSigma. (default = 5)
 %   chunkLength                     - length of chunks to be cleaned in seconds. if set to 0, automatic chunks will be used.
 %                                       (default = 0)
 %   segmentLength                   - length of the segments for automatic chunk detection in seconds (default = 1)
-%   minChunkLength                  - minimum chunk length of automatic chunk detection in seconds (default = 15)
+%   minChunkLength                  - minimum chunk length of automatic chunk detection in seconds (default = 30)
 %   prominenceQuantile              - quantile of the prominence (difference bewtween peak and through) for peak 
 %                                       detection of channel covariance for new chunks (default = 0.95)
 %   winSizeCompleteSpectrum         - window size in samples of the pwelch function to compute the spectrum of the complete dataset
@@ -112,6 +110,8 @@ disp('---------------- PLEASE CITE ------------------')
 disp(' ')
 disp('de Cheveigne, A. (2020) ZapLine: a simple and effective method to remove power line artifacts. NeuroImage, 1, 1-13.')
 disp(' ')
+disp('Klug, M., and N. A. Kloosterman. (2021) Zapline-plus: A Zapline Extension for Automatic and Adaptive Removal of Frequency-Specific Noise Artifacts in M/EEG. bioRxiv. https://www.biorxiv.org/content/10.1101/2021.10.18.464805.abstract.')
+disp(' ')
 disp('---------------- PLEASE CITE ------------------')
 
 % if the input is a struct, e.g. another zaplineConfig output, create new varargin array with all struct fields to be
@@ -138,7 +138,7 @@ addOptional(p, 'fixedNremove', 1, @(x) validateattributes(x,{'numeric'},{'intege
 addOptional(p, 'minfreq', 17, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','minfreq'))
 addOptional(p, 'maxfreq', 99, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','maxfreq'))
 addOptional(p, 'detectionWinsize', 6, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','detectionWinsize'))
-addOptional(p, 'coarseFreqDetectPowerDiff', 4, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','coarseFreqDetectPowerDiff'))
+addOptional(p, 'coarseFreqDetectPowerDiff', 7, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','coarseFreqDetectPowerDiff'))
 addOptional(p, 'coarseFreqDetectLowerPowerDiff', 1.76091259055681, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','coarseFreqDetectLowerPowerDiff'))
 addOptional(p, 'searchIndividualNoise', 1, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','searchIndividualNoise'));
 addOptional(p, 'freqDetectMultFine', 2, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','freqDetectMultFine'))
@@ -148,7 +148,7 @@ addOptional(p, 'adaptiveNremove', 1, @(x) validateattributes(x,{'numeric','logic
 addOptional(p, 'noiseCompDetectSigma', 3, @(x) validateattributes(x,{'numeric'},{'scalar','positive'},'clean_EEG_with_zapline','noiseCompDetectSigma'));
 addOptional(p, 'adaptiveSigma', 1, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','adaptiveSigma'));
 addOptional(p, 'minsigma', 2.5, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','minsigma'))
-addOptional(p, 'maxsigma', 4, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','maxsigma'))
+addOptional(p, 'maxsigma', 5, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','maxsigma'))
 addOptional(p, 'chunkLength', 0, @(x) validateattributes(x,{'numeric'},{'scalar','integer'},'clean_EEG_with_zapline','chunkLength'));
 addOptional(p, 'winSizeCompleteSpectrum', 300, @(x) validateattributes(x,{'numeric'},{'scalar','integer'},'clean_EEG_with_zapline','winSizeCompleteSpectrum'));
 addOptional(p, 'detailedFreqBoundsUpper', [-0.05 0.05], @(x) validateattributes(x,{'numeric'},{'vector'},'clean_EEG_with_zapline','detailedFreqBoundsUpper'))
@@ -156,10 +156,12 @@ addOptional(p, 'detailedFreqBoundsLower', [-0.4 0.1], @(x) validateattributes(x,
 addOptional(p, 'nkeep', 0, @(x) validateattributes(x,{'numeric'},{'scalar','integer','positive'},'clean_EEG_with_zapline','nkeep'));
 addOptional(p, 'plotResults', 1, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','plotResults'));
 addOptional(p, 'figBase', 100, @(x) validateattributes(x,{'numeric'},{'scalar','integer','positive'},'clean_EEG_with_zapline','figBase'));
+addOptional(p, 'figPos', [], @(x) validateattributes(x,{'numeric'},{'vector'},'clean_EEG_with_zapline','figPos'));
 addOptional(p, 'overwritePlot', 0, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','plotResults'));
 addOptional(p, 'segmentLength', 1, @(x) validateattributes(x,{'numeric'},{'scalar'},'clean_EEG_with_zapline','segmentLength'));
 addOptional(p, 'minChunkLength', 30, @(x) validateattributes(x,{'numeric'},{'scalar'},'clean_EEG_with_zapline','minChunkLength'));
 addOptional(p, 'prominenceQuantile', 0.95, @(x) validateattributes(x,{'numeric'},{'scalar'},'clean_EEG_with_zapline','prominenceQuantile'));
+addOptional(p, 'saveSpectra', 0, @(x) validateattributes(x,{'numeric','logical'},{'scalar','binary'},'clean_EEG_with_zapline','saveSpectra'));
 
 % parse the input
 parse(p,data,srate,varargin{:});
@@ -187,19 +189,23 @@ detailedFreqBoundsLower = p.Results.detailedFreqBoundsLower;
 nkeep = p.Results.nkeep;
 plotResults = p.Results.plotResults;
 figBase = p.Results.figBase;
+figPos = p.Results.figPos;
 overwritePlot = p.Results.overwritePlot;
 segmentLength = p.Results.segmentLength;
 minChunkLength = p.Results.minChunkLength;
 prominenceQuantile = p.Results.prominenceQuantile;
+saveSpectra = p.Results.saveSpectra;
 
 % finalize inputs
 
 if srate > 500
-    warning(sprintf(['\n--------------------------------------- WARNING ----------------------------------------',...
-        '\n\nIt is recommended to downsample the data to 250Hz or 500Hz before applying Zapline-plus!\n\n',...
-        '                               Results may be suboptimal!\n\n',...
-        '--------------------------------------- WARNING ----------------------------------------']))
+    warning(sprintf(['\n--------------------------------------- WARNING -----------------------------------------------',...
+        '\n\nIt is recommended to downsample the data to around 250Hz to 500Hz before applying Zapline-plus!\n\n',...
+        '                      Current srate is ' num2str(srate) '. Results may be suboptimal!\n\n',...
+        '--------------------------------------- WARNING -----------------------------------------------']))
 end
+
+
 
 while ~overwritePlot && ishandle(figBase+1)
     figBase = figBase+100;
@@ -209,6 +215,14 @@ transposeData = size(data,2)>size(data,1);
 if transposeData
     data = data';
 end
+
+if winSizeCompleteSpectrum*srate > size(data,1)
+    
+    winSizeCompleteSpectrum = floor(length(data)/srate);
+    warning('Data set is short, results may be suboptimal!')
+    
+end
+
 if nkeep == 0
     % our tests show actually better cleaning performance when no PCA reduction is used!
     
@@ -248,8 +262,20 @@ zaplineConfig.prominenceQuantile = prominenceQuantile;
 [pxx_clean_log resSigmaFinal resProportionRemoved resProportionRemovedNoise resProportionRemovedBelowNoise resProportionBelowLower...
     resProportionAboveUpper resRatioNoiseRaw resRatioNoiseClean resNremoveFinal resScores resNoisePeaks resFoundNoise] = deal([]);
 cleanData = data;
+plothandles = [];
 
 %% Clean each frequency one after another
+
+% find flat channels and store, remove from dataset to work on
+
+diffdata = diff(data);
+flat_channels_idx = find(all(diffdata==0));
+if ~isempty(flat_channels_idx)
+    warning(['Flat channels detected (will be ignored and added back in after Zapline-plus processing): ' num2str(flat_channels_idx)])
+    flat_channels_data = data(:,flat_channels_idx);
+    
+    data(:,flat_channels_idx) = [];
+end
 
 disp('Computing initial spectrum...')
 % compute spectrum with frequency resolution of winSizeCompleteSpectrum
@@ -258,8 +284,10 @@ disp('Computing initial spectrum...')
 pxx_raw_log = 10*log10(pxx_raw_log);
 
 % store initial raw spectrum
-analyticsResults.rawSpectrumLog = pxx_raw_log;
-analyticsResults.frequencies = f;
+if saveSpectra
+    analyticsResults.rawSpectrumLog = pxx_raw_log;
+    analyticsResults.frequencies = f;
+end
 
 automaticFreqDetection = isempty(noisefreqs);
 if automaticFreqDetection
@@ -388,6 +416,17 @@ while i_noisefreq <= length(noisefreqs)
             
             chunk = data(chunkIndices(iChunk):chunkIndices(iChunk+1)-1,:);
             
+            % find flat channels and store, remove from dataset to work on
+
+            diffchunk = diff(chunk);
+            flat_channels_idx_chunk = find(all(diffchunk==0));
+            if ~isempty(flat_channels_idx_chunk)
+                warning(['Chunk ' num2str(iChunk) ': Flat channels detected in chunk (will be ignored and added back in after Zapline-plus processing): ' num2str(flat_channels_idx_chunk)])
+                flat_channels_data_chunk = chunk(:,flat_channels_idx_chunk);
+
+                chunk(:,flat_channels_idx_chunk) = [];
+            end
+            
             if searchIndividualNoise
                 % compute spectrum with maximal frequency resolution per chunk to detect individual peaks
                 [pxx_chunk,f]=pwelch(chunk,hanning(length(chunk)),[],[],srate);
@@ -440,7 +479,9 @@ while i_noisefreq <= length(noisefreqs)
             
             % needs to be normalized for zapline
             f_noise = noisePeaks(iChunk)/srate;
-            [cleanData(chunkIndices(iChunk):chunkIndices(iChunk+1)-1,:),~,NremoveFinal(iChunk),thisScores] =...
+            
+            % apply Zapline
+            [cleanData_chunk,~,NremoveFinal(iChunk),thisScores] =...
                 nt_zapline_plus(chunk,f_noise,thisFixedNremove,this_zaplineConfig_chunk,0);
             
             scores(iChunk,1:length(thisScores)) = thisScores;
@@ -450,6 +491,34 @@ while i_noisefreq <= length(noisefreqs)
             %             figure; plot(f,mean(pxx_chunk,2));
             %             xlim([f(find(this_freq_idx,1,'first')) f(find(this_freq_idx,1,'last'))])
             %             title(['chunk ' num2str(iChunk) ', ' num2str(noisePeaks(iChunk)) ', ' num2str(NremoveFinal(iChunk)) ' removed'])
+            
+            % add flat channels back in
+            if ~isempty(flat_channels_idx_chunk)
+%                 warning(['Chunk ' num2str(iChunk) ': Detected flat channels in chunk were ignored and are added back in after Zapline plus processing: ' num2str(flat_channels_idx_chunk)])
+
+                fullCleanData_chunk = [];
+
+                i_last = 1;
+                i_last_clean = 1;
+
+                for i_flatchan = 1:length(flat_channels_idx_chunk)
+
+                    flatchan = flat_channels_idx_chunk(i_flatchan);
+                    fullCleanData_chunk(:,i_last:flatchan-1) = cleanData_chunk(:,i_last_clean:flatchan-i_flatchan);
+                    fullCleanData_chunk(:,flatchan) = flat_channels_data_chunk(:,i_flatchan);
+
+                    i_last = flatchan+1;
+                    i_last_clean = flatchan-i_flatchan+1;
+
+                end
+
+                fullCleanData_chunk(:,i_last:size(cleanData_chunk,2)+length(flat_channels_idx_chunk)) = cleanData_chunk(:,i_last_clean:end);
+
+                cleanData_chunk = fullCleanData_chunk;
+
+            end
+            
+            cleanData(chunkIndices(iChunk):chunkIndices(iChunk+1)-1,:) = cleanData_chunk;
             
         end
         disp('Done. Computing spectra...')
@@ -545,8 +614,12 @@ while i_noisefreq <= length(noisefreqs)
             grey = [0.2 0.2 0.2];
             
             this_freq_idx_plot = f>=noisefreq-1.1 & f<=noisefreq+1.1;
-            plothandles(i_noisefreq) = figure(figThis);
-            clf; set(gcf,'color','w','Position',[0 0 1500 850])
+            plothandles(i_noisefreq) = figure(figThis);clf; 
+            if ~isempty(figPos)
+                set(gcf,'color','w','Position',figPos) % e.g. figpos = [0 0 1500 850] 
+            else
+                set(gcf,'Color','w','InvertHardCopy','off', 'units','normalized','outerposition',[0 0 1 1])
+            end
             
             % plot original power
             subplot(3,30,[1:5]);
@@ -817,6 +890,32 @@ while i_noisefreq <= length(noisefreqs)
     
 end
 
+% add flat channels back in
+if ~isempty(flat_channels_idx)
+    warning(['Detected flat channels were ignored and are added back in after Zapline plus processing: ' num2str(flat_channels_idx)])
+    
+    fullCleanData = [];
+    
+    i_last = 1;
+    i_last_clean = 1;
+    
+    for i_flatchan = 1:length(flat_channels_idx)
+        
+        flatchan = flat_channels_idx(i_flatchan);
+        fullCleanData(:,i_last:flatchan-1) = cleanData(:,i_last_clean:flatchan-i_flatchan);
+        fullCleanData(:,flatchan) = flat_channels_data(:,i_flatchan);
+        
+        i_last = flatchan+1;
+        i_last_clean = flatchan-i_flatchan+1;
+        
+    end
+    
+    fullCleanData(:,i_last:size(cleanData,2)+length(flat_channels_idx)) = cleanData(:,i_last_clean:end);
+        
+    cleanData = fullCleanData;
+    
+end
+
 if transposeData
     cleanData = cleanData';
 end
@@ -842,7 +941,9 @@ end
 
 zaplineConfig.noisefreqs = noisefreqs;
 
-analyticsResults.cleanSpectrumLog = pxx_clean_log;
+if saveSpectra
+    analyticsResults.cleanSpectrumLog = pxx_clean_log;
+end
 analyticsResults.sigmaFinal = resSigmaFinal;
 analyticsResults.proportionRemoved = resProportionRemoved;
 analyticsResults.proportionRemovedNoise = resProportionRemovedNoise;

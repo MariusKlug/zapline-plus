@@ -27,6 +27,6 @@ else
     options = varargin;
 end
 
-EEG = clean_data_with_zapline_plus_eeglab_wrapper(EEG, options{:}); %, param);
+EEG = clean_data_with_zapline_plus_eeglab_wrapper(EEG, struct(options{:})); %, param);
 
-com = sprintf('[STUDY, ALLEEG] = pop_zapline_plus(EEG, %s);', vararg2str(param));
+com = sprintf('[STUDY, ALLEEG] = pop_zapline_plus(EEG, %s);', vararg2str(options));
