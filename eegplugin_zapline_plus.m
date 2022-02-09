@@ -29,7 +29,7 @@ function vers = eegplugin_zapline_plus(fig, trystrs, catchstrs)
     
     % menu callbacks
     % --------------
-    comcnt1 = [ trystrs.no_check '[EEG,LASTCOM] = pop_zapline_plus(EEG); '  catchstrs.store_and_hist ];
+    comcnt1 = [ trystrs.no_check '[EEG,LASTCOM] = pop_zapline_plus(EEG); '  catchstrs.new_and_hist ];
                 
     % create menus
     % ------------

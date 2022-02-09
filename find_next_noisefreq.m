@@ -45,7 +45,7 @@ i_enddetected  = 0;
 lastfreq = 0;
 
 % detection left and right of freq of interest
-for i = i_start-round(winsize/2):i_end-round(winsize/2)+1
+for i = i_start-round(winsize/2):i_end-winsize+1
     
     thisdata = meandata(i:i+winsize-1);
     thisfreqs = f(i:i+winsize-1);
