@@ -712,7 +712,7 @@ while i_noisefreq <= length(noisefreqs)
             
             plot(nanmean(scores,1),'color',grey)
             hold on
-            plot([mean(NremoveFinal)+1 mean(NremoveFinal)+1],ylim,'color',red)
+            meanremovedhandle = plot([mean(NremoveFinal)+1 mean(NremoveFinal)+1],ylim,'color',red);
             xlim([0.7 round(size(scores,2)/3)])
             if adaptiveNremove
                 title({'mean artifact scores [a.u.]', ['\sigma for detection = ' num2str(thisZaplineConfig.noiseCompDetectSigma)]})
@@ -722,6 +722,7 @@ while i_noisefreq <= length(noisefreqs)
             xlabel('component')
             set(gca,'fontsize',12)
             box off
+            legend(meanremovedhandle, 'mean removed')
             
             % plot new power
             subplot(3,30,[26:30]);
