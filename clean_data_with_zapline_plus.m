@@ -175,6 +175,7 @@ searchIndividualNoise = p.Results.searchIndividualNoise;
 freqDetectMultFine = p.Results.freqDetectMultFine;
 maxProportionAboveUpper = p.Results.maxProportionAboveUpper;
 maxProportionBelowLower = p.Results.maxProportionBelowLower;
+adaptiveNremove = p.Results.adaptiveNremove;
 minfreq = p.Results.minfreq;
 maxfreq = p.Results.maxfreq;
 detectionWinsize = p.Results.detectionWinsize;
@@ -713,7 +714,11 @@ while i_noisefreq <= length(noisefreqs)
             hold on
             plot([mean(NremoveFinal)+1 mean(NremoveFinal)+1],ylim,'color',red)
             xlim([0.7 round(size(scores,2)/3)])
-            title({'mean artifact scores [a.u.]', ['\sigma for detection = ' num2str(thisZaplineConfig.noiseCompDetectSigma)]})
+            if adaptiveNremove
+                title({'mean artifact scores [a.u.]', ['\sigma for detection = ' num2str(thisZaplineConfig.noiseCompDetectSigma)]})
+            else
+                title({'mean artifact scores [a.u.]'})
+            end
             xlabel('component')
             set(gca,'fontsize',12)
             box off
@@ -837,7 +842,7 @@ while i_noisefreq <= length(noisefreqs)
         
         cleaningDone = 1;
         
-        if adaptiveSigma
+        if adaptiveNremove && adaptiveSigma
             if cleaningTooStong && thisZaplineConfig.noiseCompDetectSigma < maxSigma
                 cleaningTooStongOnce = 1;
                 thisZaplineConfig.noiseCompDetectSigma = min(thisZaplineConfig.noiseCompDetectSigma + 0.25,maxSigma);
