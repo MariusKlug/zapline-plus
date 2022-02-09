@@ -24,7 +24,7 @@ if nargin < 2
     options = { 'noisefreqs' str2num( [ '[' res.freq ']' ] ) };
     if res.chunks    , options = [ options { 'chunkLength' 0 } ]; else options = [ options { 'chunkLength' 1e9 } ]; end
     if res.autodetect, options = [ options { 'adaptiveNremove' 1 'fixedNremove' 1 } ]; else options = [ options { 'adaptiveNremove' 0 'fixedNremove' str2double(res.comp) } ]; end
-    if ~res.plot,      options = [ options { 'plotResults' 0 } ]; end
+    if ~res.plot,      options = [ options { 'plotResults' 1 } ]; end
 else
     options = varargin;
 end
