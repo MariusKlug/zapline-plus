@@ -722,7 +722,7 @@ while i_noisefreq <= length(noisefreqs)
             xlabel('component')
             set(gca,'fontsize',12)
             box off
-            legend(meanremovedhandle, 'mean removed')
+            legend(meanremovedhandle, 'mean removed','edgecolor',[0.8 0.8 0.8])
             
             % plot new power
             subplot(3,30,[26:30]);
