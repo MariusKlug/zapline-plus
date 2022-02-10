@@ -298,9 +298,13 @@ if strcmp(noisefreqs,'line')
     % relative 50 Hz power
     idx = (f>49.9 & f< 50.1) | (f >59.9 & f<60.1);
     
-    noisefreqs = f(find(pxx_raw_log==max(pxx_raw_log(idx))));
+    noisefreqs_candidate = f(find(pxx_raw_log==max(pxx_raw_log(idx))));
     
-    fprintf('"noisefreqs" parameter was set to ''line'', found line noise at %g Hz!\n',noisefreqs);
+    fprintf('"noisefreqs" parameter was set to ''line'', found line noise candidate at %g Hz!\n',noisefreqs_candidate);
+    
+    noisefreqs = [];
+    minfreq = noisefreqs_candidate-detectionWinsize/2;
+    maxfreq = noisefreqs_candidate+detectionWinsize/2;
     
 end
 
