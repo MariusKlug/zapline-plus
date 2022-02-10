@@ -266,7 +266,6 @@ zaplineConfig.prominenceQuantile = prominenceQuantile;
 [pxx_clean_log resSigmaFinal resProportionRemoved resProportionRemovedNoise resProportionRemovedBelowNoise resProportionBelowLower...
     resProportionAboveUpper resRatioNoiseRaw resRatioNoiseClean resNremoveFinal resScores resNoisePeaks resFoundNoise] = deal([]);
 cleanData = data;
-plothandles = [];
 
 %% Clean each frequency one after another
 
@@ -945,7 +944,8 @@ if plotResults && ~exist('plothandles','var')
     
     figThis = figBase+1;
     plothandles(i_noisefreq) = figure(figThis);
-    clf; set(gcf,'color','w','Position',[31 256 1030 600])
+    clf; 
+    set(gcf,'Color','w','InvertHardCopy','off', 'units','normalized','outerposition',[0.2 0.2 0.7 0.7])
     
     grey = [0.2 0.2 0.2];
     plot(f,mean(pxx_raw_log,2),'color',grey);
@@ -958,6 +958,10 @@ if plotResults && ~exist('plothandles','var')
     box off
     xlim([min(f)-max(f)*0.0015 max(f)]);
     
+end
+
+if ~exist('plothandles','var')
+    plothandles = [];
 end
 
 zaplineConfig.noisefreqs = noisefreqs;
