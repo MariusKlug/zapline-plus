@@ -20,8 +20,10 @@
 %
 % Optional Parameters (these can be entered as <'key',value> pairs OR as a single struct containing relevant parameters!):
 %
-%   noisefreqs                      - vector with one or more noise frequencies to be removed. if empty or missing, noise freqs
-%                                       will be detected automatically
+%   noisefreqs                      - either 'line' or a vector with one or more noise frequencies to be removed. if 
+%                                       empty or missing, noise freqs will be detected automatically, if 'line' the
+%                                       noise freq will be set to either 50 or 60 Hz, depending on which has higher
+%                                       relative power to surroundings.
 %   adaptiveNremove                 - bool. if automatic adaptation of number of removed components should be used. (default = 1)
 %   fixedNremove                    - fixed number of removed components. if adaptive removal is used, this will be the
 %                                       minimum. Will be automatically adapted if "adaptiveSigma" is set to 1. (default = 1)
@@ -133,7 +135,7 @@ p.CaseSensitive = false;
 
 addRequired(p, 'data', @(x) validateattributes(x,{'numeric'},{'2d'},'clean_EEG_with_zapline','data'))
 addRequired(p, 'srate', @(x) validateattributes(x,{'numeric'},{'positive','scalar','integer'},'clean_EEG_with_zapline','srate'))
-addOptional(p, 'noisefreqs', [], @(x) validateattributes(x,{'numeric'},{},'clean_EEG_with_zapline','noisefreqs'))
+addOptional(p, 'noisefreqs', [])%, @(x) validateattributes(x,{'numeric','char'},{},'clean_EEG_with_zapline','noisefreqs')) % for some reason i cant make 'char' work here, it leads to errors in the other parameters
 addOptional(p, 'fixedNremove', 1, @(x) validateattributes(x,{'numeric'},{'integer','scalar'},'clean_EEG_with_zapline','fixedNremove'));
 addOptional(p, 'minfreq', 17, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','minfreq'))
 addOptional(p, 'maxfreq', 99, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','maxfreq'))
@@ -217,10 +219,11 @@ if transposeData
     data = data';
 end
 
-if winSizeCompleteSpectrum*srate > size(data,1)
+% we want at least 8 segment fro proper usage of pwelch
+if winSizeCompleteSpectrum*srate > size(data,1)/8
     
-    winSizeCompleteSpectrum = floor(length(data)/srate);
-    warning('Data set is short, results may be suboptimal!')
+    winSizeCompleteSpectrum = floor(length(data)/srate/8);
+    warning('Data set is short. Adjusted window size for whole data set spectrum calculation to be 1/8 of the length!')
     
 end
 
@@ -288,6 +291,18 @@ pxx_raw_log = 10*log10(pxx_raw_log);
 if saveSpectra
     analyticsResults.rawSpectrumLog = pxx_raw_log;
     analyticsResults.frequencies = f;
+end
+
+% search for line only
+if strcmp(noisefreqs,'line')
+    
+    % relative 50 Hz power
+    idx = (f>49.9 & f< 50.1) | (f >59.9 & f<60.1);
+    
+    noisefreqs = f(find(pxx_raw_log==max(pxx_raw_log(idx))));
+    
+    fprintf('"noisefreqs" parameter was set to ''line'', found line noise at %g Hz!\n',noisefreqs);
+    
 end
 
 automaticFreqDetection = isempty(noisefreqs);
