@@ -634,7 +634,7 @@ while i_noisefreq <= length(noisefreqs)
             if ~isempty(figPos)
                 set(gcf,'color','w','Position',figPos) % e.g. figpos = [0 0 1500 850] 
             else
-                set(gcf,'Color','w','InvertHardCopy','off', 'units','normalized','outerposition',[0 0 1 1])
+                set(gcf,'Color','w','InvertHardCopy','off', 'units','normalized','outerposition',[0.2 0.2 0.7 0.7])
             end
             
             % plot original power
