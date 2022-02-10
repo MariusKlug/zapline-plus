@@ -639,6 +639,7 @@ while i_noisefreq <= length(noisefreqs)
             else
                 set(gcf,'Color','w','InvertHardCopy','off', 'units','normalized','outerposition',[0.2 0.2 0.7 0.7])
             end
+            set(gcf,'name',[num2str(noisefreq) 'Hz'])
             
             % plot original power
             subplot(3,30,[1:5]);
@@ -950,6 +951,7 @@ if plotResults && ~exist('plothandles','var')
     plothandles(i_noisefreq) = figure(figThis);
     clf; 
     set(gcf,'Color','w','InvertHardCopy','off', 'units','normalized','outerposition',[0.2 0.2 0.7 0.7])
+    set(gcf,'name','No noise')
     
     grey = [0.2 0.2 0.2];
     plot(f,mean(pxx_raw_log,2),'color',grey);
@@ -961,6 +963,7 @@ if plotResults && ~exist('plothandles','var')
     title('no noise found')
     box off
     xlim([min(f)-max(f)*0.0015 max(f)]);
+    
     
 end
 
