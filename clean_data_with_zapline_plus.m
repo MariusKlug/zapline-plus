@@ -293,8 +293,10 @@ if saveSpectra
 end
 
 % search for line only
+lineonly = 0;
 if strcmp(noisefreqs,'line')
     
+    lineonly = 1;
     % relative 50 Hz power
     idx = (f>49.9 & f< 50.1) | (f >59.9 & f<60.1);
     
@@ -639,7 +641,7 @@ while i_noisefreq <= length(noisefreqs)
             else
                 set(gcf,'Color','w','InvertHardCopy','off', 'units','normalized','outerposition',[0.2 0.2 0.7 0.7])
             end
-            set(gcf,'name',[num2str(noisefreq) 'Hz'])
+            set(gcf,'name',[num2str(noisefreq,'%4.2f') 'Hz'])
             
             % plot original power
             subplot(3,30,[1:5]);
@@ -653,13 +655,16 @@ while i_noisefreq <= length(noisefreqs)
             box off
             
             hold on
-            if automaticFreqDetection
+            if automaticFreqDetection && ~lineonly
                 plot(xlim,[thresh thresh],'color',red)
-                title({'detected frequency:', [num2str(noisefreq) 'Hz']})
+                title({'detected frequency:', [num2str(noisefreq,'%4.2f') 'Hz']})
+            elseif automaticFreqDetection && lineonly
+                plot(xlim,[thresh thresh],'color',red)
+                title({'detected line frequency:', [num2str(noisefreq,'%4.2f') 'Hz']})
             else
-                title({'predefined frequency:', [num2str(noisefreq) 'Hz']})
+                title({'predefined frequency:', [num2str(noisefreq,'%4.2f') 'Hz']})
             end
-            xlabel('frequency')
+            xlabel('frequency [Hz]')
             ylabel('Power [10*log10 \muV^2/Hz]')
             set(gca,'fontsize',12)
             
@@ -703,7 +708,7 @@ while i_noisefreq <= length(noisefreqs)
 %                         [noisePeaks(i_chunk) noisePeaks(i_chunk) noisePeaks(i_chunk) noisePeaks(i_chunk)],grey)
             end
             
-            plot(chunkIndicesPlotIndividual,[noisePeaks],'color',grey)
+            plot(chunkIndicesPlotIndividual,[noisePeaks],'-o','color',grey,'markerfacecolor',grey,'markersize',3)
             xlim([chunkIndicesPlot(1) chunkIndicesPlot(end)])
             maxdiff = max([(max(noisePeaks))-noisefreq noisefreq-(min(noisePeaks))]);
             if maxdiff == 0
@@ -711,12 +716,12 @@ while i_noisefreq <= length(noisefreqs)
             end
             ylim([noisefreq-maxdiff*1.5 noisefreq+maxdiff*1.5])
             xlabel('time [minutes]')
-            title({['individual noise frequencies [Hz]']})
+            title({['individual peak frequencies [Hz]']})
             if searchIndividualNoise
                 foundNoisePlot = foundNoise;
                 foundNoisePlot(foundNoisePlot==1) = NaN;
                 foundNoisePlot(~isnan(foundNoisePlot)) = noisePeaks(~isnan(foundNoisePlot));
-                plot(chunkIndicesPlotIndividual,foundNoisePlot,'o','color',green);
+                plot(chunkIndicesPlotIndividual,foundNoisePlot,'s','color',green,'markerfacecolor',green,'markersize',8);
                 
                 if exist('nonoisehandle','var')
                     legend(nonoisehandle,{'no clear noise peak found'},'edgecolor',[0.8 0.8 0.8],'position',...
@@ -766,7 +771,7 @@ while i_noisefreq <= length(noisefreqs)
                 min(mean(pxx_raw_log(this_freq_idx_plot,:),2))+coarseFreqDetectPowerDiff*2])
            
             
-            xlabel('frequency')
+            xlabel('frequency [Hz]')
             ylabel('Power [10*log10 \muV^2/Hz]')
             title('cleaned spectrum')
             set(gca,'fontsize',12)
@@ -784,10 +789,10 @@ while i_noisefreq <= length(noisefreqs)
             set(gca,'ygrid','on','xgrid','on');
             set(gca,'yminorgrid','on')
             set(gca,'fontsize',12)
-            xlabel('frequency');
+            xlabel('frequency [Hz]');
             ylabel('Power [10*log10 \muV^2/Hz]');
             ylimits1=get(gca,'ylim');
-            title({['noise frequency: ' num2str(noisefreq) 'Hz'],['ratio of noise to surroundings: ' num2str(ratioNoiseRaw)]})
+            title({['noise frequency: ' num2str(noisefreq,'%4.2f') 'Hz'],['raw ratio of noise to surroundings: ' num2str(ratioNoiseRaw,'%4.2f')]})
             box off
             
             
@@ -808,11 +813,11 @@ while i_noisefreq <= length(noisefreqs)
             set(gca,'yminorgrid','on')
             set(gca,'fontsize',12)
             set(gca,'yticklabel',[]); ylabel([]);
-            xlabel('frequency (relative to noise)');
+            xlabel('frequency relative to noise [Hz]');
             ylimits2=get(gca,'ylim');
             ylimits(1)=min(ylimits1(1),ylimits2(1)); ylimits(2)=max(ylimits1(2),ylimits2(2));
-            title({['removed power at noise frequency: ' num2str(proportionRemovedNoise*100) '%']
-                ['ratio of noise to surroundings: ' num2str(ratioNoiseClean)]})
+            title({['removed power at ' num2str(noisefreq,'%4.2f') 'Hz: ' num2str(proportionRemovedNoise*100,'%4.2f') '%']
+                ['cleaned ratio of noise to surroundings: ' num2str(ratioNoiseClean,'%4.2f')]})
             
             ylim(ax1,ylimits);
             ylim(ax2,ylimits);
@@ -847,11 +852,11 @@ while i_noisefreq <= length(noisefreqs)
             set(gca,'ygrid','on','xgrid','on');
             set(gca,'yminorgrid','on')
             set(gca,'fontsize',12)
-            xlabel('frequency');
+            xlabel('frequency [Hz]');
             box off
             xlim([min(f(this_freq_idx_belownoise)) max(f(this_freq_idx_belownoise))]);
-            title({['removed of full spectrum: ' num2str(proportionRemoved*100) '%']
-                ['removed below noise: ' num2str(proportionRemovedBelowNoise*100) '%']})
+            title({['spectral power removed: ' num2str(proportionRemoved*100,'%4.2f') '%']
+                ['removed ' num2str(noisefreq-11,'%4.0f') ' to ' num2str(noisefreq-1,'%4.0f') 'Hz: ' num2str(proportionRemovedBelowNoise*100,'%4.2f') '%']})
             
             drawnow
             
