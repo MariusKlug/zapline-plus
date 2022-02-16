@@ -855,8 +855,8 @@ while i_noisefreq <= length(noisefreqs)
             xlabel('frequency [Hz]');
             box off
             xlim([min(f(this_freq_idx_belownoise)) max(f(this_freq_idx_belownoise))]);
-            title({['spectral power removed: ' num2str(proportionRemoved*100,'%4.2f') '%']
-                ['removed ' num2str(noisefreq-11,'%4.0f') ' to ' num2str(noisefreq-1,'%4.0f') 'Hz: ' num2str(proportionRemovedBelowNoise*100,'%4.2f') '%']})
+            title({['total power removed: ' num2str(proportionRemoved*100,'%4.2f') '%']
+                [num2str(noisefreq-11,'%4.0f') ' - ' num2str(noisefreq-1,'%4.0f') 'Hz power removed: ' num2str(proportionRemovedBelowNoise*100,'%4.2f') '%']})
             
             drawnow
             
