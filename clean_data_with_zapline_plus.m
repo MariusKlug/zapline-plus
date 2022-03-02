@@ -33,7 +33,7 @@
 %                                       (default = 99)
 %   detectionWinsize                - window size in Hz for detection of noise peaks (default 6Hz)
 %   coarseFreqDetectPowerDiff       - threshold in 10*log10 scale above the average of the spectrum to detect a peak as
-%                                       noise freq. (default = 7, meaning a 5 x increase of the power over the mean)
+%                                       noise freq. (default = 4, meaning a 2.5 x increase of the power over the mean)
 %   coarseFreqDetectLowerPowerDiff  - threshold in 10*log10 scale above the average of the spectrum to detect the end of
 %                                       a noise freq peak. (default = 1.76, meaning a 1.5 x increase of the power over the mean)
 %   searchIndividualNoise           - bool whether or not individual noise peaks should be used instead of the specified
@@ -379,12 +379,15 @@ while i_noisefreq <= length(noisefreqs)
         
         %% plot
         
-%         figure;
+%         figure('color','w');
 %         plot(distances)
 %         
 %         hold on
 %         
-%         plot(locs,pks,'ko')
+%         l = plot(locs,pks,'ko')
+%         title('noise narrowband covariance matrix distances')
+%         legend(l,'chunk segmentations')
+%         xlabel('time [seconds]')
         
         %% create final chunk indices
         
