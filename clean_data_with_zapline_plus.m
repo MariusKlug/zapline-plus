@@ -108,13 +108,23 @@ if nargin == 0
 end
 
 disp('Removing frequency artifacts using ZapLine with adaptations for automatic component selection and chunked data.')
-disp('---------------- PLEASE CITE ------------------')
 disp(' ')
-disp('de Cheveigne, A. (2020) ZapLine: a simple and effective method to remove power line artifacts. NeuroImage, 1, 1-13.')
 disp(' ')
-disp('Klug, M., and N. A. Kloosterman. (2021) Zapline-plus: A Zapline Extension for Automatic and Adaptive Removal of Frequency-Specific Noise Artifacts in M/EEG. bioRxiv. https://www.biorxiv.org/content/10.1101/2021.10.18.464805.abstract.')
 disp(' ')
 disp('---------------- PLEASE CITE ------------------')
+disp(' ')
+disp('Klug, M., & Kloosterman, N. A. (2022).Zapline-plus: A Zapline extension for automatic and adaptiveremoval of frequency-specific noise artifacts in M/EEG.')
+disp('Human Brain Mapping,1–16. https://doi.org/10.1002/hbm.25832')
+disp(' ')
+disp('-------------------- AND ---------------------')
+disp(' ')
+disp('de Cheveigne, A. (2020) ZapLine: a simple and effective method to remove power line artifacts.')
+disp('NeuroImage, 1, 1-13. https://doi.org/10.1016/j.neuroimage.2019.116356')
+disp(' ')
+disp('------------------ THANKS! -------------------')
+disp(' ')
+disp(' ')
+disp(' ')
 
 % if the input is a struct, e.g. another zaplineConfig output, create new varargin array with all struct fields to be
 % parsed like regular. this should allow perfect reproduction of the cleaning (except figBase)
