@@ -10,7 +10,7 @@
 
 function vers = eegplugin_zapline_plus(fig, trystrs, catchstrs)
 
-    vers = '1.0';
+    vers = '1.1';
     if nargin < 3
         error('eegplugin_zapline_plus requires 3 arguments');
     end
@@ -33,4 +33,4 @@ function vers = eegplugin_zapline_plus(fig, trystrs, catchstrs)
                 
     % create menus
     % ------------
-    uimenu( menui1, 'label', 'Zapline plus noise removal', 'separator', 'on', 'callback', comcnt1);
+    uimenu( menui1, 'label', 'Zapline-plus noise removal', 'separator', 'on', 'callback', comcnt1);
