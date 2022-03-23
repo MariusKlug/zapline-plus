@@ -4,14 +4,19 @@ Improvements of the ZapLine function to remove line noise from EEG/MEG data. Add
 Dependencies of Noisetools are provided with permission by Alain de Cheveigné. Please visit the original repository for more info and additional noise removal tools: http://audition.ens.fr/adc/NoiseTools/
 
 # Quick start
+
+If you just want to download the package and use Zapline-plus with any data matrix, you can feed that data and the sampling rate directly in like this:
 ```matlab
 cleanedData = clean_data_with_zapline_plus(data,srate);
 ```
 
-Or if you live in the EEGlab universe:
+Or if you live in the EEGLAB universe, you can install Zapline-plus via the EEGLAB plugins manager and then run the cleaning either via the `Tools` GUI or in the command line like this:
+
 ```matlab
 EEG = clean_data_with_zapline_plus_eeglab_wrapper(EEG,struct('noisefreqs','line')) % specifying the config is optional
 ```
+# Detailed user guide
+Please check out the [wiki](https://github.com/MariusKlug/zapline-plus/wiki) articles for a detailed guide on [how to use Zapline-plus](https://github.com/MariusKlug/zapline-plus/wiki/Zapline-plus-usage) and [how to interpret the plot](https://github.com/MariusKlug/zapline-plus/wiki/Zapline-plus-plot).
 
 # Please cite
 
