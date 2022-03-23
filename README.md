@@ -14,7 +14,7 @@ Or if you live in the EEGLAB universe, you can install Zapline-plus via the EEGL
 EEG = clean_data_with_zapline_plus_eeglab_wrapper(EEG,struct('noisefreqs','line')) % specifying the config is optional
 ```
 # Detailed user guide
-Please check out the [wiki](https://github.com/MariusKlug/zapline-plus/wiki) articles for a detailed guide on [how to use Zapline-plus](https://github.com/MariusKlug/zapline-plus/wiki/Zapline-plus-user-guide) and [how to interpret the plot](https://github.com/MariusKlug/zapline-plus/wiki/Zapline-plus-plot).
+Please check out the wiki articles for a detailed guide on [how to use Zapline-plus](https://github.com/MariusKlug/zapline-plus/wiki/Zapline-plus-user-guide) and [how to interpret the plot](https://github.com/MariusKlug/zapline-plus/wiki/Zapline-plus-plot).
 
 # Please cite
 
