@@ -1,7 +1,5 @@
 # Zapline-plus
-Improvements of the ZapLine function to remove line noise from EEG/MEG data. Adds automatic detection of the number of components to remove, and chunks the data into segments to account for nonstationarities.
-
-Dependencies of Noisetools are provided with permission by Alain de Cheveigné. Please visit the original repository for more info and additional noise removal tools: http://audition.ens.fr/adc/NoiseTools/
+Zapline-plus is a wrapper for Zapline that automatically removes spectral peaks like line noise from your data while ensuring minimal negative impact, preserving both the non-noise spectrum and the data rank. It searches for noise frequencies, divides the data into spatially stable chunks, and adapts the cleaning strength automatically. A detailed plot is created.
 
 # Quick start
 
@@ -24,3 +22,4 @@ Klug, M., & Kloosterman, N. A. (2022). Zapline-plus: A Zapline extension for aut
 
 de Cheveigne, A. (2020). ZapLine: a simple and effective method to remove power line artifacts. NeuroImage, 1, 1-13. https://doi.org/10.1016/j.neuroimage.2019.116356
 
+Dependencies of Noisetools are provided with permission by Alain de Cheveigné. Please visit the original repository for more info and additional noise removal tools: http://audition.ens.fr/adc/NoiseTools/
