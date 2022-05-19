@@ -10,7 +10,7 @@
 
 function vers = eegplugin_zapline_plus(fig, trystrs, catchstrs)
 
-    vers = '1.1';
+    vers = '1.2';
     if nargin < 3
         error('eegplugin_zapline_plus requires 3 arguments');
     end
