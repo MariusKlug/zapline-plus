@@ -162,7 +162,7 @@ addOptional(p, 'adaptiveSigma', 1, @(x) validateattributes(x,{'numeric','logical
 addOptional(p, 'minsigma', 2.5, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','minsigma'))
 addOptional(p, 'maxsigma', 5, @(x) validateattributes(x,{'numeric'},{'positive','scalar'},'clean_EEG_with_zapline','maxsigma'))
 addOptional(p, 'chunkLength', 0, @(x) validateattributes(x,{'numeric'},{'scalar','integer'},'clean_EEG_with_zapline','chunkLength'));
-addOptional(p, 'winSizeCompleteSpectrum', 300, @(x) validateattributes(x,{'numeric'},{'scalar','integer'},'clean_EEG_with_zapline','winSizeCompleteSpectrum'));
+addOptional(p, 'winSizeCompleteSpectrum', 0, @(x) validateattributes(x,{'numeric'},{'scalar','integer'},'clean_EEG_with_zapline','winSizeCompleteSpectrum'));
 addOptional(p, 'detailedFreqBoundsUpper', [-0.05 0.05], @(x) validateattributes(x,{'numeric'},{'vector'},'clean_EEG_with_zapline','detailedFreqBoundsUpper'))
 addOptional(p, 'detailedFreqBoundsLower', [-0.4 0.1], @(x) validateattributes(x,{'numeric'},{'vector'},'clean_EEG_with_zapline','detailedFreqBoundsLower'))
 addOptional(p, 'nkeep', 0, @(x) validateattributes(x,{'numeric'},{'scalar','integer','positive'},'clean_EEG_with_zapline','nkeep'));
