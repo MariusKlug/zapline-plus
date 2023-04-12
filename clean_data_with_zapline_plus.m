@@ -308,7 +308,27 @@ if strcmp(noisefreqs,'line')
     
     lineonly = 1;
     % relative 50 Hz power
-    idx = (f>49.9 & f< 50.1) | (f >59.9 & f<60.1);
+
+    % BF_wider_linefrequency_search_range (Suddha Sourav):
+    % Previously line frequency was searched in the following ranges:
+    % (49.9 Hz < f < 50.1 Hz) OR (59.9 Hz < f < 60.1 Hz). The frequency range
+    % of 0.2 Hz is generally sufficient but still might miss line frequencies
+    % in some inopportune intervals, see:
+    % Schäfer et al. (2018). Non-Gaussian power grid
+    % frequency fluctuations characterized by Lévy-stable laws and superstatis-
+    % tics. Nature Energy, 3(2), 119-126. doi:
+    % https://doi.org/10.1038/s41560-017-0058-z
+    %
+    % This problem is more serious for EEG/MEG research in lower/middle-income
+    % countries, where the range might be wider, see:
+    % Gautam et al. (2020). Analyses of Indian Power System Frequency. In 2020
+    % IEEE POWERCON (pp. 1-6). IEEE. doi:
+    % https://doi.org/10.1109/POWERCON48463.2020.9230532
+    %
+    % Suggestion: increase the range to 2 Hz, i.e.
+    % (49 Hz < f < 51 Hz) OR (59 Hz < f < 60 Hz)
+
+    idx = (f > 49 & f < 50) | (f > 59 & f < 60);
     
     noisefreqs_candidate = f(find(pxx_raw_log==max(pxx_raw_log(idx))));
     
