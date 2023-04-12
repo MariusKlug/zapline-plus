@@ -310,7 +310,28 @@ if strcmp(noisefreqs,'line')
     % relative 50 Hz power
     idx = (f>49.9 & f< 50.1) | (f >59.9 & f<60.1);
     
-    noisefreqs_candidate = f(find(pxx_raw_log==max(pxx_raw_log(idx))));
+    % BF_noise_frequency_candidate_search (Suddha Sourav):
+    % Index in 2D, take all channels (i.e. columns) into account by
+    % getting a chunk of the spectra over all electrodes at the fre-
+    % quencies of interest.
+    spectraChunk_allChans = pxx_raw_log(idx,:);
+    
+    % Get the global maximum across all channels, calculated on the 
+    % flattened spectral data chunk.
+    [maxVal, n] = max(spectraChunk_allChans(:));
+    
+    % Find out which row and column (frequency index in the spectral data
+    % chunk, and channel number) the max value was in
+    [fIdx_max, chanIdx_max] = ind2sub(size(spectraChunk_allChans),n);
+    
+    % Find out the frequency: first, relate the spectral data chunk's
+    % indices to the actual frequency indices, then index based on this
+    % vector
+    f_spectraChunk_allChans = f(find(idx));
+    noisefreqs_candidate = f_spectraChunk_allChans(fIdx_max);
+    
+    % P.S. for multiple maximum values, the method anove will always return
+    % the first maximum value, thus one less potential bug
     
     fprintf('"noisefreqs" parameter was set to ''line'', found line noise candidate at %g Hz!\n',noisefreqs_candidate);
     
