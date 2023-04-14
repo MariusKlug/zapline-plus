@@ -23,3 +23,7 @@ Klug, M., & Kloosterman, N. A. (2022). Zapline-plus: A Zapline extension for aut
 de Cheveigne, A. (2020). ZapLine: a simple and effective method to remove power line artifacts. NeuroImage, 1, 1-13. https://doi.org/10.1016/j.neuroimage.2019.116356
 
 Dependencies of Noisetools are provided with permission by Alain de Cheveigné. Please visit the original repository for more info and additional noise removal tools: http://audition.ens.fr/adc/NoiseTools/
+
+# Requirements
+- Signal Processing Toolbox
+- Statistics Toolbox
