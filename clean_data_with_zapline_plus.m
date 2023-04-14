@@ -275,7 +275,6 @@ zaplineConfig.prominenceQuantile = prominenceQuantile;
 % initialize results in case no noise frequenc is found
 [pxx_clean_log resSigmaFinal resProportionRemoved resProportionRemovedNoise resProportionRemovedBelowNoise resProportionBelowLower...
     resProportionAboveUpper resRatioNoiseRaw resRatioNoiseClean resNremoveFinal resScores resNoisePeaks resFoundNoise] = deal([]);
-cleanData = data;
 
 %% Clean each frequency one after another
 
@@ -289,6 +288,8 @@ if ~isempty(flat_channels_idx)
     
     data(:,flat_channels_idx) = [];
 end
+
+cleanData = data;
 
 disp('Computing initial spectrum...')
 % compute spectrum with frequency resolution of winSizeCompleteSpectrum
